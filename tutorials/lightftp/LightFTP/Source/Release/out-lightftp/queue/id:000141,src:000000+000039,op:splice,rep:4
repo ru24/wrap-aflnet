@@ -1,11 +1,0 @@
-USER anonymous
-PASS ubuntu
-SYST
-PWSSubunyu
-ST
-PASS ubuntu
-S 127,0,0,1,152,192þ
-LIST
-QUIT
-PWSSubunyu
-ST

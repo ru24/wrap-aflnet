@@ -1,8 +1,0 @@
-USER ubuntu
-PRESTAKS AKS ubuntu
-PASS ubunSYST
-PWD
-PORT 127,0,0,1,132,209
-LIST
-MKD test
-QUIT

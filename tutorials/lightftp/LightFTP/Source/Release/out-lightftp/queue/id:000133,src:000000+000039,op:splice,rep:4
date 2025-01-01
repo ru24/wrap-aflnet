@@ -1,13 +1,0 @@
-USER anonymous
-PASS ubuntu
-SYSSubunyu
-ST
-PASS ubuntu
-Pçubunyu
-ST
-WD
-PORT 127,0,0,1,152,193
-LIST
-QUIT
-PWD
-PWD

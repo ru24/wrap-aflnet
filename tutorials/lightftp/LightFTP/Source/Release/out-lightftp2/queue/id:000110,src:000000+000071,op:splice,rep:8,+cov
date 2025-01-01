@@ -1,10 +1,0 @@
-USER anonymous
-PASS abuntuPASS ìÿtu
-132,S ubunt209
-LIST
-MKD ,0,0,˜,132,H09
-LIST
-MKD test
-QUIT
-PASS ubuntu
-SYSèéLIST

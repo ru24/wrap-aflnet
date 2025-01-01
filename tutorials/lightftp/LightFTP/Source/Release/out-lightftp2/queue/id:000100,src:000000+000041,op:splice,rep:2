@@ -1,9 +1,0 @@
-USER anonymous
-PASS REymouLISTsPASS ubuntu
-SYST
-1WD
-PORT 127,0,0,,152,193
-LIST
-QUIT
-SYST
-PWD
