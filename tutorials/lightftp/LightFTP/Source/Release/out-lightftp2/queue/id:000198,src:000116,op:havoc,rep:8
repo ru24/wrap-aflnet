@@ -1,0 +1,13 @@
+USER anonymous
+PASS abuntu
+PASS ubuntu
+132,2MKD ,0,0,˜,132,209
+LIST
+1R
+1R
+MKD test
+QUIT
+PASS ubuntu
+QUIT
+PASS ubuntu
+SYST

@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubunyu
+ST
+\ASS ubuntu
+SYST
+PWD
+POR_193
+LIST
+QUIT
+SYST
+PWD

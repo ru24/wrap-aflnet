@@ -1,0 +1,8 @@
+USER ubuntu
+PASS ubuntu
+SYST
+S un柰같같같같같같같같같같같같같같RESTu뮥같같같같같같같같같같RE52,193S un뮥같같같같같같같같같같같같같같RESTu뮥같같같같같같같같같같RE52,193
+PORT 127,0,0,1,132,209
+LIST
+MKD test
+QUIT

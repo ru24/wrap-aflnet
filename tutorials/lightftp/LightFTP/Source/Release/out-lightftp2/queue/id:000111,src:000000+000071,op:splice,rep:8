@@ -1,0 +1,11 @@
+USER anonymous
+PORT 127,152,193
+QUIT¼PASS abuntu
+PASS u,132,209
+LIST
+M*D tesKD ,0,0,˜,132,%09
+LIST
+MKD test
+QUIT
+P)SS ubuntu
+SYSTSYST

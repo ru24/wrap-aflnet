@@ -1,0 +1,10 @@
+USER abuntu
+PASS ubuntu
+132,209
+LIST
+MKD ,0,0,˜,132,209
+LIST
+MKD test
+QUIT
+PASS ubuntu
+SYST

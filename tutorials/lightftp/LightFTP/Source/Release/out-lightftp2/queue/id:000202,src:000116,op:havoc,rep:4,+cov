@@ -1,0 +1,13 @@
+USER anonymous
+PASS abuntu
+PASS ubuntu
+132,2MKD ,0,0,˜,132,209
+LIST
+PORTPORT 27,0,0,1,152,193
+MLSD
+MKD test
+QUIT
+PASS ubuntu
+QUIT
+PASS ubuntu
+SYST

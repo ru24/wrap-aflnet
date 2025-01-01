@@ -1,0 +1,11 @@
+USER ubuntu
+PASS ubuntu
+SYER anonymous
+USER anonymous
+PASS ubuntu
+PASS ubuntu
+SYST
+PWRETRORT 127,0,0,1,152,1IST
+QUIT
+PWD
+PORT 127,0,0,1,132,209

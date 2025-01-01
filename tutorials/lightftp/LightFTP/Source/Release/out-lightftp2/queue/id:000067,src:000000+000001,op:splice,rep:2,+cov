@@ -1,0 +1,10 @@
+USER abuntu
+PASS ubuntu
+7YST
+PWD
+PORT 127,09
+LIST
+MKD test
+QUIT
+PASS ubuntu
+SYST

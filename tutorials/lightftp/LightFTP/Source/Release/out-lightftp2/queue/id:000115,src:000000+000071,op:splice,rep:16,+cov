@@ -1,0 +1,15 @@
+USER anonymous
+SYST
+PASS 
+PASS ubunQUITdu
+SYSYì
+SYST
+ST
+$$$$
+PASS ubunQUITtu
+S
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

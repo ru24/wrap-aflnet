@@ -1,0 +1,9 @@
+USER ubuntu
+PASS ubuntu
+S UuNCu	Cuú	S uNCS uqC9
+S uuNCq	Cuú	ô uNCS uqC9
+PWD
+PORT 127,0,0,1,132,209
+LIST
+MKD test
+QUIT

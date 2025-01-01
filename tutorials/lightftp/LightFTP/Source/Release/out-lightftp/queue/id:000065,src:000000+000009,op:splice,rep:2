@@ -1,0 +1,10 @@
+USER anonNFRnymous
+USER anonymous
+PASS ubuntu
+SYST
+PWD
+PORT 12L,0ÿÿ,1,152,193
+LIST
+QUIT
+PASS ubuntu
+SYST

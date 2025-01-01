@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubunÿB1UvPASS u~untu
+SYST
+PWD
+PORT 127,0,0,1,152,1uuuuuuuuuuQUIT
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

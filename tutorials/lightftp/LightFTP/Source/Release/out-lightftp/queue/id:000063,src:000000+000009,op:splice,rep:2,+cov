@@ -1,0 +1,11 @@
+PWD
+USER anonNFRnymous
+USER anonymous
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,SYST152,193
+LIST
+QUIT
+PASS ubuntu
+SYST
