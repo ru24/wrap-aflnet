@@ -1,0 +1,19 @@
+out-lightftp/
+out-lightftp2/
+
+# バックアップファイル
+*.log
+*.tmp
+
+# ビルド結果や中間ファイル
+fftp
+*.d
+*.o
+
+# OS固有のファイル
+.DS_Store
+Thumbs.db
+
+# 秘密情報
+.env
+config/secrets.yml
