@@ -1049,15 +1049,6 @@ void create_input_faults_mutated_from_qfname(const char *q_fname) {
   sem_post(sem_faults); // ロック解除
 }
 
-/* メモリを解放する関数 */
-void free_inputfaults(InputFaults *inputfaults) {
-  if (inputfaults) {
-    free(inputfaults->faults);
-    free(inputfaults);
-  }
-}
-
-
 /* Update state-aware variables */
 void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
 {
@@ -4322,6 +4313,8 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
     /* We use the actual length of all messages (full_len), not the len of the mutated message subsequence (len)*/
     add_to_queue(fn, full_len, 0);
 
+    update_state_aware_inputfaults(fn);
+
     if (state_aware_mode) update_state_aware_variables(queue_top, 0);
 
     /* save the seed to file for replaying */
@@ -4343,8 +4336,6 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
     fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, queued_paths,
                       describe_op(hnb));
-
-    update_state_aware_inputfaults(fn); 
 
     if (res == FAULT_ERROR)
       FATAL("Unable to execute target application");
