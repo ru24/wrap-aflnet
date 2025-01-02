@@ -1,0 +1,11 @@
+USER ubuntu
+PASS ubuntu
+SYST
+PASS ubuntu
+PSER anonymous
+PASS ubuntu
+SYRT
+PEHEPASS ubunMKDLIST
+QUIT
+PORT 127,0,0,1,132,209
+LIST

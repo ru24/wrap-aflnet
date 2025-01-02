@@ -1,0 +1,21 @@
+USER ubuntu
+PASS ubuntu
+ÂvS
+èCS
+PORT 17,0,p,1,152,193
+T  annymoò–ÂvS
+èBS
+PORT 17,0,p,1,152,193
+T  ano@ymoò–ÂvS
+èCS
+PORT 17,0,p,1,152,193
+T  annymoò–ÂvS
+èBS
+PORT 17,0,p,1,152,H93
+T  ano@ymoò–MKD 127,0,0,1,152,193
+MKD test
+PWD
+PORT 127,0,0,1,132,209
+LIST
+MKD test
+QUIT

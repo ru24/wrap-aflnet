@@ -1,0 +1,10 @@
+USER                     BORPWD
+NOOP
+QUIT+
+SYST a.onPASVÿ
+PWD
+NOOP
+QUIT
+SYST a.onPIT+
+SYST a.oASVÿ
+QTIT

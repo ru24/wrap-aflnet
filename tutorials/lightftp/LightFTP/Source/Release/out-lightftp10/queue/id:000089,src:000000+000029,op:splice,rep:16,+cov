@@ -1,0 +1,11 @@
+USER anonymous
+PSE? ano
+SYSTýPWD
+PPROT////////////////////2T 1K:,00,1,-52,w93
+RNFR
+zUITUSER
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

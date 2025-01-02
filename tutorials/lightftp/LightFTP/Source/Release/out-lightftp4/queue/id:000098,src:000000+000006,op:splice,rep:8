@@ -1,0 +1,10 @@
+USER anonymous
+TAXT 127ÿÿÿ
+PASS uPBSZbuntX
+SYST
+PWD
+PORT 12,0,,1,152,1&3
+LIST
+QUIT
+SYST
+PWD

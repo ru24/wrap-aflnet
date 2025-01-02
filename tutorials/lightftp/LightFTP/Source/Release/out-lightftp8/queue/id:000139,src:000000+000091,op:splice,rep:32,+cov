@@ -1,0 +1,7 @@
+USER anonymous
+PASS ubuntu
+PASV ubuntu
+PASVPWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

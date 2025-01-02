@@ -1,0 +1,13 @@
+USER anonymous
+PASS ubuntu
+PAUSYST ubuntu
+PASS ubœntu
+SYSTST ubuntu
+PASS ub
+PWD
+POgT 12ÿ€0,0,1,132,209
+LIST
+M-D test
+QUIT
+LIST
+PWD

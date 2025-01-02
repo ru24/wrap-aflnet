@@ -1,0 +1,9 @@
+USER anonymous
+PASS ubuntu
+PASS ubuntu
+REST ubunSER axoAABORbuntu
+{FE
+`FE
+PORT 127,0,0,1,152,193
+LIST
+QUIT

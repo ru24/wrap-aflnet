@@ -1,0 +1,9 @@
+USER anonymous
+PASS ubuntmous
+RNFR ubuntu
+SYST
+PWD
+PORT 127UIT
+QUIT
+SYST
+PWD

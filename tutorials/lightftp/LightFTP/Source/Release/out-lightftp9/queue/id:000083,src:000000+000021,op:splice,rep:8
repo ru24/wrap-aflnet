@@ -1,0 +1,15 @@
+USER anonymous
+PASS ubuntu”
+PASS ub^ntu
+SYST
+PWD
+PORT 127
+LISf
+QUIT
+SYST
+SYST
+PWD
+PORT 127
+LISf
+QUIT
+SYST

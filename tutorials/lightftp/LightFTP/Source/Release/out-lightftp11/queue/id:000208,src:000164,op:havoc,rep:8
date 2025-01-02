@@ -1,0 +1,13 @@
+PWD
+PBSZ anonymous
+PBSZ anpSYdTnymoSZ anous
+SYST
+PWD
+PORT 127,0,0S 
+USESS ubuntu
+SY,1,152,193
+LIST
+QUIT
+SYST
+PASS ubuntu
+SYST

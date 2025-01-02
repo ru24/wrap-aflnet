@@ -1,0 +1,9 @@
+USER ubuntu
+PASS ubuntu
+LIST
+LIST
+;èR ubER ubntu
+PORT 127,0,0,1,132,209
+LIST
+MKD test
+QUIT

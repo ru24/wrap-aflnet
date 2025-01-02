@@ -1,0 +1,9 @@
+USER anonymouMSIT#‚eIST
+PASS ubuntu
+SYST
+ËWD
+PRETR127,0,0,MLSD2,193
+LIST
+QUIT
+PASS ubuntu
+SYST

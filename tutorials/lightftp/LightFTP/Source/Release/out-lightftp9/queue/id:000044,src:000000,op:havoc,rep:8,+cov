@@ -1,0 +1,7 @@
+T PORT 127,0ÿ,1,:::::::z:193
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

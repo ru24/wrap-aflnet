@@ -1,0 +1,9 @@
+USER anonymous
+PASS ay‡ymTYPžžžžžžžžžžžžžžžžžžœžžžSYST
+PWD
+PORT 125,0,0,1,152
+PORT 125,0,0,1,152,19,193
+LIST
+QUIT
+SYST
+PWD

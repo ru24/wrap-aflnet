@@ -1,0 +1,11 @@
+USER ubuntu
+PASS ubuntu
+PASS ubuntu
+PART 127,0,Q
+PWD
+PORT 127,0,0,1,132,209
+D
+D
+QUIT
+PASS ubuntu
+MKD test

@@ -1,0 +1,12 @@
+USER ubuntu
+PASS ubuntu
+SYERPWDonymous
+PASS ubuntu
+LISTbuntu
+PWD
+^RNF LISTLI
+PAS ubuntu
+PWD LISTLIST
+QUIT
+QUIT
+PWD

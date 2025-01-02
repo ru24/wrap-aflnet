@@ -1,0 +1,11 @@
+USER anonymous
+PART 127,0,9
+PASS ubuntu
+SYST
+PWD
+T 127,0,9
+PASS ubuntu
+SYST
+QUIT
+SYST
+SYST

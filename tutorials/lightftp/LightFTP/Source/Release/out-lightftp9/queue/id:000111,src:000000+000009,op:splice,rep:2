@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubintu
+PASS ubuntu
+SYST
+PWD
+PORT 93
+LIST
+QUIT
+PWD
+SYST

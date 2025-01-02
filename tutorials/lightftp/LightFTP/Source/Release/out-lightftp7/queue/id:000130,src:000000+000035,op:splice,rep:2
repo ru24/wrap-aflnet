@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubuntu
+SYSR anonymousôUSER anon—mo€s
+PASS ubuntu
+SYST
+PRNTOWD
+PORT 127,0,0
+LIST
+QUIT
+PWD
+PORT 127,0,0,1,152,193

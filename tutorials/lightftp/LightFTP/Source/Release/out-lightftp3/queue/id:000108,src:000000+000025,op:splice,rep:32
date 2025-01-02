@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubuntu
+PWD¯PASS uKunELE
+SYST
+PWD
+PORT 10,1,152,193%
+LIST
+QUiT
+SYST
+PWD

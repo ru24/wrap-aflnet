@@ -20,8 +20,7 @@ __wrap_malloc (size_t size)
     void *ptr = __real_malloc (size);
     
     if (has_fault(1)) { // mallocのFIDは1と設定する。
-      snprintf (buf, sizeof (buf), "__wrap_malloc: ptr=%p, size=%ld\n", ptr, size);
-      fputs (buf, stderr);
+      return NULL;
     }
     return ptr;
 }
@@ -32,9 +31,7 @@ ssize_t __wrap_recv(int sockfd, void *buf, size_t len, int flags) {
 
     if (has_fault(2)){
     // printf は内部で malloc を呼び出す可能性があるため使用しない
-    snprintf(log_buf, sizeof(log_buf), "__wrap_recv: sockfd=%d, len=%zu, flags=%d, ret=%zd\n",
-             sockfd, len, flags, ret);
-    fputs(log_buf, stderr);
+    return -1;
   }
     return ret;
 }
@@ -46,7 +43,7 @@ ssize_t __wrap_send(int sockfd, const void *buf, size_t len, int flags) {
     // 実際の send() をロード
     ssize_t ret = __real_send(sockfd, buf, len, flags);
     if (has_fault(3)){
-    
+    return -1; 
   }
     // 実際の send() を呼び出す
     return ret;

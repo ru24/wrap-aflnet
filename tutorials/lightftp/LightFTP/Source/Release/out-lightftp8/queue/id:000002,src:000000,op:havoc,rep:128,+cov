@@ -1,0 +1,8 @@
+MKDW-sv
+MKËW-sv
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

@@ -1,0 +1,12 @@
+USER anonymous
+PSER anonymous
+SYST
+SPASVYST
+PASS ubuntu
+SYST
+PWD
+PORT 152,193
+LIST
+QUIT
+SYST
+PWD

@@ -1,0 +1,9 @@
+USER anonymous
+PSER anonbmoqs
+SYST
+WD
+PORT 127,0,0,1,152,193
+LIST
+QUIT
+SYST
+PWD

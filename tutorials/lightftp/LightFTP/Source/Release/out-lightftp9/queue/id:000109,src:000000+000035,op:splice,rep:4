@@ -1,0 +1,10 @@
+USER anonymous
+PSER a==============E====
+PASS ubuntu
+SYST
+PWD
+PORT N2ссс@,0,0,1,152,193
+LIST
+QUIT
+SYST
+PWD

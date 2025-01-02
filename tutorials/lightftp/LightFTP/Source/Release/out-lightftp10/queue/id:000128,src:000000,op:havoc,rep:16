@@ -1,0 +1,9 @@
+USER anonymous
+PASS ubuntu
+PORT 127,0,0,1,152,193
+S u´uSTOR<t‹ ubunt‹0,93
+3
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

@@ -1,0 +1,9 @@
+USER anonymous
+PASS ubuntu
+MKD tet
+ÿÿ
+MKD tet
+ÿÿPWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

@@ -1,0 +1,14 @@
+USER anonymous
+PASS ubuntu
+USER ubuntu
+PASS ubuntu
+
+ST 
+USER ubuntu
+PWD
+PORT 127,0,0,1,132,209
+LIST
+MKD /est
+QUIT
+PORT 127,0,0,1,152,193
+SYST

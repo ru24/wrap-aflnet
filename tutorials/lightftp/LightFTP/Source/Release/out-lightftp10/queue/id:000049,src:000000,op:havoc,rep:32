@@ -1,0 +1,10 @@
+PWD
+LÿsdPASS ubuntu
+PWD
+LÿsdPASS ubunu
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

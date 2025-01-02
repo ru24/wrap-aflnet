@@ -1,0 +1,11 @@
+USER ubuntu
+PASS ubuntu
+PASS ubuntu
+PART 127,0,Q
+PWD
+PORT 127,0,0,1,132,209
+PBSZ 1SER anonymPAS5ous
+PBSZ 1SZ 152,193	
+USER anonymPAS5ous
+MKD test
+QUIT

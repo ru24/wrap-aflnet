@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubuntmous
+RNFR ubuntu
+SYST
+PWD
+PORT 127OPTS,1,152,193
+LI~T
+QUIT
+SYST
+PWD

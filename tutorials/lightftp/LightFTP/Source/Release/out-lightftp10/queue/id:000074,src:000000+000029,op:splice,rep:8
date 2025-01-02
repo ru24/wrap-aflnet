@@ -1,0 +1,11 @@
+USER anonymous
+PSER anonymousSYSTn
+SYST
+PASS ubunt‹
+ST 127,0,0,1,152,d93
+LI
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

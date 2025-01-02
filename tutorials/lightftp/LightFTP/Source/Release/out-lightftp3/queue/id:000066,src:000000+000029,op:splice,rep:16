@@ -1,0 +1,24 @@
+PWD
+PASS ubSS ubun
+PASS ubuntus
+USER aSITEˆQus
+PASS ubun
+PASS ubuntuD
+P>RT 127ntu)0,0,1,152,193LIRESTSTù
+QUIT
+RETR/
+CDNOO¹PWD
+PASS ubSS ubun
+PASS ubuntus
+USER aSITEˆQus
+PASS ubun
+PASS ubuntuD
+P>RT 127ntu,0,0,1,152,193LIRESTSTù
+QUIT
+RETR/
+CDNOO¹PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

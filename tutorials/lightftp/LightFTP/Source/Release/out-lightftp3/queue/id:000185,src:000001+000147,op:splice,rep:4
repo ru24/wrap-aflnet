@@ -1,0 +1,14 @@
+USER ubuntu
+PASS ubuntu
+SYS
+PASS ubuntu
+SYST ubuntu
+PASS ubuntu
+PASS ubuOtu
+SD
+RNFR 127,0,0,MKD52,193
+LIST
+QUIT
+PWD
+PORT 1PBSZ,0,1,152,-93
+PWD

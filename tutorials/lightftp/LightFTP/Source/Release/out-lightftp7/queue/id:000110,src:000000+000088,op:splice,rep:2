@@ -1,0 +1,7 @@
+USER anonymous
+PASS                    ntu
+S,152,193
+LIST
+QUIT
+SYST
+PWD

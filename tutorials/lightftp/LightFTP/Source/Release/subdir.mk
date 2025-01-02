@@ -9,7 +9,8 @@ C_SRCS += \
 ../main.c \
 ../x_malloc.c \
 ../wrap.c \
-../faults.c
+../faults.c \
+../../../../../shared_defs.c
 
 OBJS += \
 ./cfgparse.o \
@@ -17,14 +18,14 @@ OBJS += \
 ./main.o \
 ./x_malloc.o \
 ./wrap.o \
-./faults.o
+./faults.o \
+./shared_defs.o
 
 C_DEPS += \
 ./cfgparse.d \
 ./ftpserv.d \
 ./main.d \
 ./x_malloc.d 
-
 
 # Each subdirectory must supply rules for building sources it contributes
 %.o: ../%.c
@@ -34,4 +35,10 @@ C_DEPS += \
 	@echo 'Finished building: $<'
 	@echo ' '
 
-
+# Rule for building objects from sources in ../../../../../
+%.o: ../../../../../%.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: GCC C Compiler'
+	$(CC) $(CFLAGS) -std=c99 -O3 -Wall -Wextra -c -fmessage-length=0 -Wno-unused-parameter -Wno-unused-result -fno-ident -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '

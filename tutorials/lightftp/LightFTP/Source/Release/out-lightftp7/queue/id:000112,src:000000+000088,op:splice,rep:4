@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubuntmouqous
+RNFR ubuntu
+SYSs
+RNFR ubuntu
+SYST
+52,113
+LIST
+QUIT
+SYST
+PWD

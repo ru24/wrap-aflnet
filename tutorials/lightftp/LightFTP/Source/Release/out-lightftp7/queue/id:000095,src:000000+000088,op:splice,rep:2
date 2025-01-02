@@ -1,0 +1,12 @@
+USER anonymous
+PASS ubuntmous
+RNFR ubuntu
+SYST
+PWD
+PO3
+LIST
+QUI,152,193
+LIST
+QUIT
+SYST
+PWD

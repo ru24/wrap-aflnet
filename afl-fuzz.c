@@ -74,6 +74,10 @@
 
 #include <stdbool.h>
 
+#include "shared_defs.h"
+
+#include <semaphore.h>
+
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined (__OpenBSD__)
 #  include <sys/sysctl.h>
 #endif /* __APPLE__ || __FreeBSD__ || __OpenBSD__ */
@@ -97,41 +101,16 @@
 /* Lots of globals, but mostly for the status UI and other things where it
    really makes no sense to haul them around as function parameters. */
 
-#define SHM_NAME "/shared_faults_memory"
-#define ENTRY_SIZE 300
-#define SHM_SIZE sizeof(InputFaults) + sizeof(Fault) * ENTRY_SIZE
-
-enum Mode { 
-  RECORD_mode, 
-  INJECTION_mode
-};
-
-typedef struct {
-  int fid;
-  float probability;
-  u8 is_fi;
-  unsigned int response_code;
-} Fault;
-
-typedef struct {
-  int current_size; // faults配列の現在のサイズ
-  enum Mode current_mode; // has_faultsのmode切り替え
-  Fault faults[];   // 入力に関連するFault配列
-} InputFaults;
-
-/* 変異後の入力保持用 */
-#define SHM_NAME_MUTATED "/shared_mutated_faults"
-#define ENTRY_SIZE_MUTATED 300
-#define SHM_SIZE_MUTATED sizeof(InputFaults) + sizeof(Fault) * ENTRY_SIZE_MUTATED
-
 InputFaults *input_faults_mutated = NULL; // 変異後のデータを格納するための変数
-
-#define SHM_NAME_MODE "/shared_mode"
-#define SHM_SIZE_MODE sizeof(enum Mode)
 
 /* SFIをmutateするかのフラグ */ 
 bool SFI_mutate_flag = false;  // fuzzer側で使用
 int fuzz_loop_time = 0;
+bool sfi_mutate_with = false; // ファイル名のためのフラグ
+
+sem_t* sem_mutated;
+sem_t* sem_mode;
+sem_t* sem_faults;
 
 /* SFIのmode */
 enum Mode* SFI_mode = NULL; // モード共有メモリのポインタ
@@ -822,6 +801,15 @@ void save_SFIList_response_code_to_file(InputFaults *inputfaults, unsigned char 
   fclose(fp);
 }
 
+sem_t* initialize_semaphore(const char* sem_name) {
+    sem_t* sem = sem_open(sem_name, O_CREAT, 0666, 1); // 初期値を1に設定
+    if (sem == SEM_FAILED) {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
+    return sem;
+}
+
 /* Listをファイルに保存 */
 void save_SFIList_is_fi_to_file(InputFaults *inputfaults, unsigned char *fname)
 {
@@ -868,8 +856,9 @@ void save_SFIList_fid_to_file(InputFaults *inputfaults, unsigned char *fname)
 }
 
 /* SFI_Listを更新する. 多分、stateの更新と同じタイミングで使うといいかも */
-void update_state_aware_inputfaults (struct queue_entry *q) 
+void update_state_aware_inputfaults (u8 *fn) 
 {
+  sem_wait(sem_faults); // ロック取得
   int shm_fd = shm_open(SHM_NAME, O_RDONLY, 0666);
   if (shm_fd == -1) {
     perror("shm_open failed");
@@ -883,7 +872,7 @@ void update_state_aware_inputfaults (struct queue_entry *q)
   }
 
   // IDのListの作成
-  char *base_name = basename(q->fname);
+  u8 *base_name = basename(fn);
 
   // is_fi用のディレクトリに保存
   char *is_fi_path = alloc_printf("%s/SFI_List/is_fi/%s", out_dir, base_name);
@@ -902,6 +891,7 @@ void update_state_aware_inputfaults (struct queue_entry *q)
 
   munmap(input_faults, SHM_SIZE);
   close(shm_fd);
+  sem_post(sem_faults); // ロック解除
 }
 
 /* mutatedを初期化 */
@@ -935,7 +925,7 @@ void setup_mutated_shared_memory_fuzzer() {
 
 }
 
-/* SFI_modeの切り替え */
+/* SFI_modeの切り替え用の共有メモリ */
 void setup_mode_shared_memory_fuzzer() {
   int shm_fd = shm_open(SHM_NAME_MODE, O_CREAT | O_RDWR, 0666);
   if (shm_fd == -1) {
@@ -1014,6 +1004,7 @@ int *read_values_from_file(const char *filename, int *count) {
 
 /* 分割されたファイル構造から InputFaults を作成 */
 void create_input_faults_mutated_from_qfname(const char *q_fname) {
+  sem_wait(sem_faults); // ロック取得
   char is_fi_file[ENTRY_SIZE], fid_file[ENTRY_SIZE], response_code_file[ENTRY_SIZE];
   char *last_dir = basename(q_fname);
   snprintf(is_fi_file, sizeof(is_fi_file), "%s/SFI_List/is_fi/%s", out_dir, last_dir);
@@ -1055,6 +1046,7 @@ void create_input_faults_mutated_from_qfname(const char *q_fname) {
   free(is_fi_values);
   free(fid_values);
   free(response_code_values);
+  sem_post(sem_faults); // ロック解除
 }
 
 /* メモリを解放する関数 */
@@ -1073,8 +1065,6 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
   int discard, i;
   state_info_t *state;
   unsigned int state_count;
-
-  update_state_aware_inputfaults(q);
 
   if (!response_buf_size || !response_bytes) return;
 
@@ -4237,6 +4227,8 @@ static u8* describe_op(u8 hnb) {
 
   }
 
+  if (sfi_mutate_with) strcat(ret, ",+sfi_mutate");
+
   if (hnb == 2) strcat(ret, ",+cov");
 
   return ret;
@@ -4348,6 +4340,11 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
        successful. */
 
     res = calibrate_case(argv, queue_top, mem, queue_cycle - 1, 0);
+
+    fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, queued_paths,
+                      describe_op(hnb));
+
+    update_state_aware_inputfaults(fn); 
 
     if (res == FAULT_ERROR)
       FATAL("Unable to execute target application");
@@ -5734,6 +5731,10 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
   }
 
   write_to_testcase(out_buf, len);
+
+  if (*SFI_mode == RECORD_mode) {
+    update_state_aware_inputfaults(queue_cur->fname);
+  }
 
   /* AFLNet update kl_messages linked list */
 
@@ -7351,16 +7352,23 @@ havoc_stage:
     printf("SFI_mutate!!!\n");
     for (int i = 0; i < input_faults_mutated->current_size; i++) {
       printf("current_size : %d\n", input_faults_mutated->current_size);
+      sfi_mutate_with = false;
       if (input_faults_mutated->faults[i].response_code == target_state_id) {
 
         printf("SFI_mutate!\n");
 
+        sfi_mutate_with = true;
+
         *SFI_mode = INJECTION_mode;
         FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
+
+              printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
 
         if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
 
         FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
+
+        stage_cur++;
       }
     }
   }
@@ -9207,6 +9215,11 @@ int main(int argc, char** argv) {
   setup_mode_shared_memory_fuzzer();
   setup_mutated_shared_memory_fuzzer();
 
+      // セマフォの初期化
+    sem_mutated = initialize_semaphore(SEM_MUTATED_NAME);
+    sem_mode = initialize_semaphore(SEM_MODE_NAME);
+    sem_faults = initialize_semaphore(SEM_FAULTS_NAME);
+
 
   while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:QN:D:W:w:e:P:KEq:s:RFc:l:")) > 0)
 
@@ -9687,6 +9700,7 @@ int main(int argc, char** argv) {
       printf("fname %d : %s\n", fuzz_loop_time, queue_cur->fname);
 
       /* 仮 */
+      sem_wait(sem_mutated); // ロック取得
       if (target_state_id != 0) {
         create_input_faults_mutated_from_qfname(queue_cur->fname); 
         if (is_target_state_id_included(input_faults_mutated, target_state_id)) {
@@ -9696,6 +9710,7 @@ int main(int argc, char** argv) {
           *SFI_mode = RECORD_mode;
         }
       }
+      sem_post(sem_mutated); // ロック解除
 
       printf("SFI_mode %d : %d\n", fuzz_loop_time, SFI_mutate_flag);
 
