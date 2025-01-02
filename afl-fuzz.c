@@ -109,7 +109,7 @@ enum Mode {
 typedef struct {
   int fid;
   float probability;
-  bool is_fi;
+  u8 is_fi;
   unsigned int response_code;
 } Fault;
 
@@ -935,42 +935,6 @@ void setup_mutated_shared_memory_fuzzer() {
 
 }
 
-
-/* shared_faults_memory からデータを読み込む */
-InputFaults *load_shared_faults_memory() {
-  int shm_fd = shm_open(SHM_NAME, O_RDONLY, 0666); // 読み取り専用でオープン
-  if (shm_fd == -1) {
-    perror("shm_open failed for shared_faults_memory");
-    return NULL;
-  }
-
-  InputFaults *input_faults = (InputFaults *)mmap(NULL, SHM_SIZE, PROT_READ, MAP_SHARED, shm_fd, 0);
-  if (input_faults == MAP_FAILED) {
-    perror("mmap failed for shared_faults_memory");
-    close(shm_fd);
-    return NULL;
-  }
-
-  close(shm_fd);
-  return input_faults;
-}
-
-/* 引数で指定したInputsfault型 の内容を inputs_faults_mutated にコピーする */
-void load_and_copy_faults(InputFaults *input_faults_src) {
-  // input_faults_mutatedが初期化されているか確認
-  if (input_faults_mutated == NULL) {
-    fprintf(stderr, "input_faults_mutated is not initialized.\n");
-    munmap(input_faults_src, SHM_SIZE);
-    return;
-  }
-
-  // コピー処理
-  memcpy(input_faults_mutated, input_faults_src, sizeof(InputFaults) + sizeof(Fault) * input_faults_src->current_size);
-
-  // モードをINJECTION_modeに変更
-  input_faults_mutated->current_mode = INJECTION_mode;
-}
-
 /* SFI_modeの切り替え */
 void setup_mode_shared_memory_fuzzer() {
   int shm_fd = shm_open(SHM_NAME_MODE, O_CREAT | O_RDWR, 0666);
@@ -998,27 +962,6 @@ void setup_mode_shared_memory_fuzzer() {
   *SFI_mode = RECORD_mode;
 }
 
-/* is_fiを変異させる関数 */
-void mutate_is_fi(InputFaults *inputfaults) {
-  if (inputfaults == NULL || inputfaults->faults == NULL) {
-    fprintf(stderr, "Invalid InputFaults structure\n");
-    return;
-  }
-
-  srand(time(NULL)); // ランダムシードの初期化
-
-  for (int i = 0; i < inputfaults->current_size; i++) {
-    int original = inputfaults->faults[i].is_fi;
-
-    // ランダムに変異させる例
-    // 0または1にランダム変更
-    inputfaults->faults[i].is_fi = rand() % 2;
-
-    printf("is_fi[%d]: %d -> %d\n", i, original, inputfaults->faults[i].is_fi);
-  }
-}
-
-
 /* target_state_idがSFI_Listに含まれているか確認 */
 bool is_target_state_id_included(InputFaults* inputfaults, int target_state_id) {
   if (inputfaults == NULL || inputfaults->faults == NULL) {
@@ -1026,7 +969,7 @@ bool is_target_state_id_included(InputFaults* inputfaults, int target_state_id) 
   }
 
   for (int i = 0; i < inputfaults->current_size; i++) {
-    if (inputfaults->faults[i].is_fi && i == target_state_id) {
+    if (inputfaults->faults[i].response_code == target_state_id) {
       return true;
     }
   }
@@ -1036,47 +979,46 @@ bool is_target_state_id_included(InputFaults* inputfaults, int target_state_id) 
 
 /* ファイルから複数の値を読み取る関数 */
 int *read_values_from_file(const char *filename, int *count) {
+
   FILE *fp = fopen(filename, "r");
   if (!fp) {
     perror("Failed to open file");
     return NULL;
   }
 
-  int *values = malloc(sizeof(int) * 1024); // 最大1024件を仮定
-  if (!values) {
-    perror("Failed to allocate memory");
-    fclose(fp);
-    return NULL;
-  }
-
-  int value, current_size = 0;
-  while (fscanf(fp, "%d", &value) == 1) {
-    values[current_size++] = value;
-
-    // 必要に応じてメモリを拡張
-    if (current_size % 1024 == 0) {
-      int *new_values = realloc(values, sizeof(int) * (current_size + 1024));
-      if (!new_values) {
-        perror("Failed to reallocate memory");
-        free(values);
+    // 動的メモリの確保
+    int *values = malloc(sizeof(int) * ENTRY_SIZE);
+    if (!values) {
+        perror("Failed to allocate memory");
         fclose(fp);
         return NULL;
-      }
-      values = new_values;
     }
-  }
 
-  fclose(fp);
-  *count = current_size;
-  return values;
+    *count = 0;
+
+    int value;
+
+      while (fscanf(fp, "%d", &value) == 1) {
+        if (*count >= ENTRY_SIZE) {
+            fprintf(stderr, "Error: Too many entries in file %s. Max is %d\n", filename, ENTRY_SIZE);
+            fclose(fp);
+            return NULL; // 最大要素数を超えた場合はエラー
+        }
+        values[*count] = value;
+        (*count)++;
+    }
+
+    fclose(fp);
+    return values; // 静的配列のポインタを返す
 }
 
 /* 分割されたファイル構造から InputFaults を作成 */
-void create_inputfaults_from_qfname(const char *q_fname) {
-  char is_fi_file[256], fid_file[256], response_code_file[256];
-  snprintf(is_fi_file, sizeof(is_fi_file), "%s/SFI_List/is_fi/%s", out_dir, q_fname);
-  snprintf(fid_file, sizeof(fid_file), "%s/SFI_List/fid/%s", out_dir, q_fname);
-  snprintf(response_code_file, sizeof(response_code_file), "%s/SFI_List/response_code/%s", out_dir, q_fname);
+void create_input_faults_mutated_from_qfname(const char *q_fname) {
+  char is_fi_file[ENTRY_SIZE], fid_file[ENTRY_SIZE], response_code_file[ENTRY_SIZE];
+  char *last_dir = basename(q_fname);
+  snprintf(is_fi_file, sizeof(is_fi_file), "%s/SFI_List/is_fi/%s", out_dir, last_dir);
+  snprintf(fid_file, sizeof(fid_file), "%s/SFI_List/fid/%s", out_dir, last_dir);
+  snprintf(response_code_file, sizeof(response_code_file), "%s/SFI_List/response_code/%s", out_dir, last_dir);
 
   // 各ファイルから値を読み取る
   int is_fi_count, fid_count, response_code_count;
@@ -1087,7 +1029,11 @@ void create_inputfaults_from_qfname(const char *q_fname) {
   // エラー処理
   if (!is_fi_values || !fid_values || !response_code_values ||
     is_fi_count != fid_count || fid_count != response_code_count) {
-    fprintf(stderr, "Error reading files for q_fname: %s\n", q_fname);
+    fprintf(stderr, "Error reading files for last_dir: %s\n", last_dir);
+    fprintf(stderr, "Details: is_fi_values=%p, fid_values=%p, response_code_values=%p, "
+                    "is_fi_count=%d, fid_count=%d, response_code_count=%d\n",
+            (void*)is_fi_values, (void*)fid_values, (void*)response_code_values,
+            is_fi_count, fid_count, response_code_count);
     free(is_fi_values);
     free(fid_values);
     free(response_code_values);
@@ -6221,6 +6167,8 @@ static u8 fuzz_one(char** argv) {
   u8  a_collect[MAX_AUTO_EXTRA];
   u32 a_len = 0;
 
+  printf("fuzz_one SFI_mutate_flag : %d\n", SFI_mutate_flag);
+
 #ifdef IGNORE_FINDS
 
   /* In IGNORE_FINDS mode, skip any entries that weren't in the
@@ -7397,6 +7345,25 @@ havoc_stage:
   orig_hit_cnt = queued_paths + unique_crashes;
 
   havoc_queued = queued_paths;
+  
+    /* SFI_Listのis_fiの変異 */
+  if (SFI_mutate_flag) {
+    printf("SFI_mutate!!!\n");
+    for (int i = 0; i < input_faults_mutated->current_size; i++) {
+      printf("current_size : %d\n", input_faults_mutated->current_size);
+      if (input_faults_mutated->faults[i].response_code == target_state_id) {
+
+        printf("SFI_mutate!\n");
+
+        *SFI_mode = INJECTION_mode;
+        FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
+
+        if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
+
+        FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
+      }
+    }
+  }
 
   /* We essentially just do several thousand runs (depending on perf_score)
      where we take the input file and make random stacked tweaks. */
@@ -9237,6 +9204,10 @@ int main(int argc, char** argv) {
   gettimeofday(&tv, &tz);
   srandom(tv.tv_sec ^ tv.tv_usec ^ getpid());
 
+  setup_mode_shared_memory_fuzzer();
+  setup_mutated_shared_memory_fuzzer();
+
+
   while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:QN:D:W:w:e:P:KEq:s:RFc:l:")) > 0)
 
     switch (opt) {
@@ -9713,20 +9684,23 @@ int main(int argc, char** argv) {
         }
       }
 
-      printf("fname : %s\n", queue_cur->fname);
+      printf("fname %d : %s\n", fuzz_loop_time, queue_cur->fname);
+
       /* 仮 */
-      if (target_state_id != 0 && fuzz_loop_time % 10 == 9) {
-        create_inputfaults_from_qfname(queue_cur->fname); 
+      if (target_state_id != 0) {
+        create_input_faults_mutated_from_qfname(queue_cur->fname); 
         if (is_target_state_id_included(input_faults_mutated, target_state_id)) {
           SFI_mutate_flag = true;
-          *SFI_mode = INJECTION_mode;
-          fuzz_loop_time = 0;
-          printf("INJECTION_mode!!!!!!!!!!!!!!!!!!!!!!!!\n");
         } else {
           SFI_mutate_flag = false;
           *SFI_mode = RECORD_mode;
         }
       }
+
+      printf("SFI_mode %d : %d\n", fuzz_loop_time, SFI_mutate_flag);
+
+      fuzz_loop_time++;
+      
 
       skipped_fuzz = fuzz_one(use_argv);
 
