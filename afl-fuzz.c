@@ -100,8 +100,8 @@
 
 /* Lots of globals, but mostly for the status UI and other things where it
    really makes no sense to haul them around as function parameters. */
-
 InputFaults *input_faults_mutated = NULL; // 変異後のデータを格納するための変数
+InputFaults *input_faults_before_mutation = NULL;
 
 /* SFIをmutateするかのフラグ */ 
 bool SFI_mutate_flag = false;  // fuzzer側で使用
@@ -802,12 +802,12 @@ void save_SFIList_response_code_to_file(InputFaults *inputfaults, unsigned char 
 }
 
 sem_t* initialize_semaphore(const char* sem_name) {
-    sem_t* sem = sem_open(sem_name, O_CREAT, 0666, 1); // 初期値を1に設定
-    if (sem == SEM_FAILED) {
-        perror("sem_open");
-        exit(EXIT_FAILURE);
-    }
-    return sem;
+  sem_t* sem = sem_open(sem_name, O_CREAT, 0666, 1); // 初期値を1に設定
+  if (sem == SEM_FAILED) {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  return sem;
 }
 
 /* Listをファイルに保存 */
@@ -858,7 +858,6 @@ void save_SFIList_fid_to_file(InputFaults *inputfaults, unsigned char *fname)
 /* SFI_Listを更新する. 多分、stateの更新と同じタイミングで使うといいかも */
 void update_state_aware_inputfaults (u8 *fn) 
 {
-  sem_wait(sem_faults); // ロック取得
   int shm_fd = shm_open(SHM_NAME, O_RDONLY, 0666);
   if (shm_fd == -1) {
     perror("shm_open failed");
@@ -891,7 +890,6 @@ void update_state_aware_inputfaults (u8 *fn)
 
   munmap(input_faults, SHM_SIZE);
   close(shm_fd);
-  sem_post(sem_faults); // ロック解除
 }
 
 /* mutatedを初期化 */
@@ -921,11 +919,9 @@ void setup_mutated_shared_memory_fuzzer() {
 
   // 初期化
   input_faults_mutated->current_size = 0;
-  input_faults_mutated->current_mode = INJECTION_mode;
-
 }
 
-/* SFI_modeの切り替え用の共有メモリ */
+/* SFI_modeの切り替え */
 void setup_mode_shared_memory_fuzzer() {
   int shm_fd = shm_open(SHM_NAME_MODE, O_CREAT | O_RDWR, 0666);
   if (shm_fd == -1) {
@@ -976,35 +972,34 @@ int *read_values_from_file(const char *filename, int *count) {
     return NULL;
   }
 
-    // 動的メモリの確保
-    int *values = malloc(sizeof(int) * ENTRY_SIZE);
-    if (!values) {
-        perror("Failed to allocate memory");
-        fclose(fp);
-        return NULL;
-    }
-
-    *count = 0;
-
-    int value;
-
-      while (fscanf(fp, "%d", &value) == 1) {
-        if (*count >= ENTRY_SIZE) {
-            fprintf(stderr, "Error: Too many entries in file %s. Max is %d\n", filename, ENTRY_SIZE);
-            fclose(fp);
-            return NULL; // 最大要素数を超えた場合はエラー
-        }
-        values[*count] = value;
-        (*count)++;
-    }
-
+  // 動的メモリの確保
+  int *values = malloc(sizeof(int) * ENTRY_SIZE);
+  if (!values) {
+    perror("Failed to allocate memory");
     fclose(fp);
-    return values; // 静的配列のポインタを返す
+    return NULL;
+  }
+
+  *count = 0;
+
+  int value;
+
+  while (fscanf(fp, "%d", &value) == 1) {
+    if (*count >= ENTRY_SIZE) {
+      fprintf(stderr, "Error: Too many entries in file %s. Max is %d\n", filename, ENTRY_SIZE);
+      fclose(fp);
+      return NULL; // 最大要素数を超えた場合はエラー
+    }
+    values[*count] = value;
+    (*count)++;
+  }
+
+  fclose(fp);
+  return values; // 静的配列のポインタを返す
 }
 
 /* 分割されたファイル構造から InputFaults を作成 */
 void create_input_faults_mutated_from_qfname(const char *q_fname) {
-  sem_wait(sem_faults); // ロック取得
   char is_fi_file[ENTRY_SIZE], fid_file[ENTRY_SIZE], response_code_file[ENTRY_SIZE];
   char *last_dir = basename(q_fname);
   snprintf(is_fi_file, sizeof(is_fi_file), "%s/SFI_List/is_fi/%s", out_dir, last_dir);
@@ -1022,7 +1017,7 @@ void create_input_faults_mutated_from_qfname(const char *q_fname) {
     is_fi_count != fid_count || fid_count != response_code_count) {
     fprintf(stderr, "Error reading files for last_dir: %s\n", last_dir);
     fprintf(stderr, "Details: is_fi_values=%p, fid_values=%p, response_code_values=%p, "
-                    "is_fi_count=%d, fid_count=%d, response_code_count=%d\n",
+            "is_fi_count=%d, fid_count=%d, response_code_count=%d\n",
             (void*)is_fi_values, (void*)fid_values, (void*)response_code_values,
             is_fi_count, fid_count, response_code_count);
     free(is_fi_values);
@@ -1031,23 +1026,31 @@ void create_input_faults_mutated_from_qfname(const char *q_fname) {
     return;
   }
 
-  memset(input_faults_mutated->faults, 0, SHM_SIZE_MUTATED);
-
-  input_faults_mutated->current_size = is_fi_count;
+  input_faults_before_mutation = (InputFaults*)malloc(SHM_SIZE_MUTATED);
+  memset(input_faults_before_mutation, 0, SHM_SIZE_MUTATED);
+  input_faults_before_mutation->current_size = is_fi_count;
 
   // Fault 構造体にデータを格納
   for (int i = 0; i < is_fi_count; i++) {
-    input_faults_mutated->faults[i].is_fi = is_fi_values[i];
-    input_faults_mutated->faults[i].fid = fid_values[i];
-    input_faults_mutated->faults[i].response_code = response_code_values[i];
+    input_faults_before_mutation->faults[i].is_fi = is_fi_values[i];
+    input_faults_before_mutation->faults[i].fid = fid_values[i];
+    input_faults_before_mutation->faults[i].response_code = response_code_values[i];
   }
 
   // メモリ解放
   free(is_fi_values);
   free(fid_values);
   free(response_code_values);
-  sem_post(sem_faults); // ロック解除
 }
+
+/* メモリを解放する関数 */
+void free_inputfaults(InputFaults *inputfaults) {
+  if (inputfaults) {
+    free(inputfaults->faults);
+    free(inputfaults);
+  }
+}
+
 
 /* Update state-aware variables */
 void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
@@ -4313,9 +4316,9 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
     /* We use the actual length of all messages (full_len), not the len of the mutated message subsequence (len)*/
     add_to_queue(fn, full_len, 0);
 
-    update_state_aware_inputfaults(fn);
-
     if (state_aware_mode) update_state_aware_variables(queue_top, 0);
+
+    update_state_aware_inputfaults(fn);
 
     /* save the seed to file for replaying */
     u8 *fn_replay = alloc_printf("%s/replayable-queue/%s", out_dir, basename(queue_top->fname));
@@ -4336,6 +4339,8 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
     fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, queued_paths,
                       describe_op(hnb));
+
+    // update_state_aware_inputfaults(fn); 
 
     if (res == FAULT_ERROR)
       FATAL("Unable to execute target application");
@@ -7337,27 +7342,37 @@ havoc_stage:
   orig_hit_cnt = queued_paths + unique_crashes;
 
   havoc_queued = queued_paths;
-  
-    /* SFI_Listのis_fiの変異 */
+
+  // time_t now;
+
+  /* SFI_Listのis_fiの変異 */
   if (SFI_mutate_flag) {
     printf("SFI_mutate!!!\n");
-    for (int i = 0; i < input_faults_mutated->current_size; i++) {
-      printf("current_size : %d\n", input_faults_mutated->current_size);
+    for (int i = 0; i < input_faults_before_mutation->current_size; i++) {
+      printf("current_size : %d\n", input_faults_before_mutation->current_size);
       sfi_mutate_with = false;
-      if (input_faults_mutated->faults[i].response_code == target_state_id) {
+      if (input_faults_before_mutation->faults[i].response_code == target_state_id) {
 
         printf("SFI_mutate!\n");
 
         sfi_mutate_with = true;
 
         *SFI_mode = INJECTION_mode;
-        FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
 
-              printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
+        // mutateして共有メモリに渡す
+        u8 is_fi_mutated = input_faults_before_mutation->faults[i].is_fi;
+
+        FLIP_BIT(&is_fi_mutated, 0);
+        // struct tm *utc = gmtime(&now);
+        input_faults_mutated->faults[i].is_fi = is_fi_mutated;
+
+        printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
 
         if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
 
-        FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
+        // printf("FLIP_BIT_time : %d", time(&now))
+
+        // FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
 
         stage_cur++;
       }
@@ -9206,10 +9221,10 @@ int main(int argc, char** argv) {
   setup_mode_shared_memory_fuzzer();
   setup_mutated_shared_memory_fuzzer();
 
-      // セマフォの初期化
-    sem_mutated = initialize_semaphore(SEM_MUTATED_NAME);
-    sem_mode = initialize_semaphore(SEM_MODE_NAME);
-    sem_faults = initialize_semaphore(SEM_FAULTS_NAME);
+  // セマフォの初期化
+  sem_mutated = initialize_semaphore(SEM_MUTATED_NAME);
+  sem_mode = initialize_semaphore(SEM_MODE_NAME);
+  sem_faults = initialize_semaphore(SEM_FAULTS_NAME);
 
 
   while ((opt = getopt(argc, argv, "+i:o:f:m:t:T:dnCB:S:M:x:QN:D:W:w:e:P:KEq:s:RFc:l:")) > 0)
@@ -9690,23 +9705,22 @@ int main(int argc, char** argv) {
 
       printf("fname %d : %s\n", fuzz_loop_time, queue_cur->fname);
 
+      *SFI_mode = RECORD_mode;
+
       /* 仮 */
-      sem_wait(sem_mutated); // ロック取得
       if (target_state_id != 0) {
         create_input_faults_mutated_from_qfname(queue_cur->fname); 
-        if (is_target_state_id_included(input_faults_mutated, target_state_id)) {
+        if (is_target_state_id_included(input_faults_before_mutation, target_state_id)) {
           SFI_mutate_flag = true;
         } else {
           SFI_mutate_flag = false;
-          *SFI_mode = RECORD_mode;
         }
       }
-      sem_post(sem_mutated); // ロック解除
 
       printf("SFI_mode %d : %d\n", fuzz_loop_time, SFI_mutate_flag);
 
       fuzz_loop_time++;
-      
+
 
       skipped_fuzz = fuzz_one(use_argv);
 
