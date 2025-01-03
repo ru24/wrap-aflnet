@@ -1,8 +1,0 @@
-USER anonymous
-PASS ubuntu
-T 11;3
-\PT 933ê
-PWD
-PORT 127,0,0,1,152,193
-LIST
-QUIT

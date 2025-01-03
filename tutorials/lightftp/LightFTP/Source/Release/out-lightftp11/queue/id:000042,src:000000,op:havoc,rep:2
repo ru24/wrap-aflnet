@@ -1,9 +1,0 @@
-USER anonymous
-USER anonymous
-PASS ubuntu
-PASS ubuntu
-SYST
-PWD
-PORT 127,0,0,1,152,193
-LIST
-QUIT

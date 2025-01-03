@@ -1,5 +1,6 @@
 out-lightftp/
 out-lightftp2/
+out-lightftp*/
 
 # ビルド結果や中間ファイル
 fftp

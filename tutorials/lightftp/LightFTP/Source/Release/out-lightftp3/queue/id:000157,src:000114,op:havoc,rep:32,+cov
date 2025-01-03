@@ -1,7 +1,0 @@
-USER anonymous
-PASS ubuntu
-LIST
-PAS ubuntu
-PWD
-^RNF LISTLIST
-QUIT

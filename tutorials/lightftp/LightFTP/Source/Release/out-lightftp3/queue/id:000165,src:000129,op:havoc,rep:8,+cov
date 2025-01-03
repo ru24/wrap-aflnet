@@ -1,11 +1,0 @@
-USER anonymous
-PASS ubuntu
-SYST
-Ep anonyW[us
-PWDPASS ubuntu
-ooooPORT 127,0,0,1,P52,193
-LIS@
-QU*2,0,1,1
-ooooPORT 127,0,0,1,152,193
-LI T
-QUIT
