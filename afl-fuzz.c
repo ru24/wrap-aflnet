@@ -102,6 +102,7 @@
    really makes no sense to haul them around as function parameters. */
 InputFaults *input_faults_mutated = NULL; // 変異後のデータを格納するための変数
 InputFaults *input_faults_before_mutation = NULL;
+InputFaults *input_faults = NULL;
 
 /* SFIをmutateするかのフラグ */ 
 bool SFI_mutate_flag = false;  // fuzzer側で使用
@@ -111,6 +112,10 @@ bool sfi_mutate_with = false; // ファイル名のためのフラグ
 sem_t* sem_mutated;
 sem_t* sem_mode;
 sem_t* sem_faults;
+
+int shm_mutated_fd;
+int shm_mode_fd;
+int shm_faults_fd;
 
 /* SFIのmode */
 enum Mode* SFI_mode = NULL; // モード共有メモリのポインタ
@@ -858,18 +863,6 @@ void save_SFIList_fid_to_file(InputFaults *inputfaults, unsigned char *fname)
 /* SFI_Listを更新する. 多分、stateの更新と同じタイミングで使うといいかも */
 void update_state_aware_inputfaults (u8 *fn) 
 {
-  int shm_fd = shm_open(SHM_NAME, O_RDONLY, 0666);
-  if (shm_fd == -1) {
-    perror("shm_open failed");
-    exit(1);
-  }
-
-  InputFaults *input_faults = mmap(NULL, SHM_SIZE, PROT_READ, MAP_SHARED, shm_fd, 0);
-  if (input_faults == MAP_FAILED) {
-    perror("mmap failed");
-    exit(1);
-  }
-
   // IDのListの作成
   u8 *base_name = basename(fn);
 
@@ -887,62 +880,79 @@ void update_state_aware_inputfaults (u8 *fn)
   char *response_code_path = alloc_printf("%s/SFI_List/response_code/%s", out_dir, base_name);
   save_SFIList_response_code_to_file(input_faults, (unsigned char *)response_code_path);
   ck_free(response_code_path);
-
-  munmap(input_faults, SHM_SIZE);
-  close(shm_fd);
 }
+
+/* faultsを初期化 */
+void setup_faults_shared_memory_fuzzer() {
+  shm_faults_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
+  if (shm_faults_fd == -1) {
+    perror("shm_open failed");
+    exit(1);
+  }
+
+  // 共有メモリのサイズを設定
+  if (ftruncate(shm_faults_fd, SHM_SIZE) == -1) {
+    perror("ftruncate failed for faults");
+    close(shm_faults_fd);
+    exit(1);
+  }
+
+  input_faults = mmap(NULL, SHM_SIZE, PROT_READ, MAP_SHARED, shm_faults_fd, 0);
+  if (input_faults == MAP_FAILED) {
+    perror("mmap failed");
+    exit(1);
+  }
+
+}
+
 
 /* mutatedを初期化 */
 void setup_mutated_shared_memory_fuzzer() {
-  int shm_fd = shm_open(SHM_NAME_MUTATED, O_CREAT | O_RDWR, 0666);
-  if (shm_fd == -1) {
+  shm_mutated_fd = shm_open(SHM_NAME_MUTATED, O_CREAT | O_RDWR, 0666);
+  if (shm_mutated_fd == -1) {
     perror("shm_open failed for mutated faults");
     exit(1);
   }
 
   // 共有メモリのサイズを設定
-  if (ftruncate(shm_fd, SHM_SIZE_MUTATED) == -1) {
+  if (ftruncate(shm_mutated_fd, SHM_SIZE_MUTATED) == -1) {
     perror("ftruncate failed for mutated faults");
-    close(shm_fd);
+    close(shm_mutated_fd);
     exit(1);
   }
 
   // 共有メモリをマッピング
-  input_faults_mutated = (InputFaults *)mmap(NULL, SHM_SIZE_MUTATED, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  input_faults_mutated = (InputFaults *)mmap(NULL, SHM_SIZE_MUTATED, PROT_READ | PROT_WRITE, MAP_SHARED, shm_mutated_fd, 0);
   if (input_faults_mutated == MAP_FAILED) {
     perror("mmap failed for mutated faults");
-    close(shm_fd);
+    close(shm_mutated_fd);
     exit(1);
   }
-
-  close(shm_fd);
 
   // 初期化
   input_faults_mutated->current_size = 0;
 }
 
-/* SFI_modeの切り替え */
+/* SFI_modeの切り替えと初期化*/
 void setup_mode_shared_memory_fuzzer() {
-  int shm_fd = shm_open(SHM_NAME_MODE, O_CREAT | O_RDWR, 0666);
-  if (shm_fd == -1) {
+  shm_mode_fd = shm_open(SHM_NAME_MODE, O_CREAT | O_RDWR, 0666);
+  if (shm_mode_fd == -1) {
     perror("shm_open failed for Mode");
     exit(1);
   }
 
-  if (ftruncate(shm_fd, SHM_SIZE_MODE) == -1) {
+  if (ftruncate(shm_mode_fd, SHM_SIZE_MODE) == -1) {
     perror("ftruncate failed for Mode");
-    close(shm_fd);
+    close(shm_mode_fd);
     exit(1);
   }
 
-  SFI_mode = (enum Mode*)mmap(NULL, SHM_SIZE_MODE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  SFI_mode = (enum Mode*)mmap(NULL, SHM_SIZE_MODE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_mode_fd, 0);
   if (SFI_mode == MAP_FAILED) {
     perror("mmap failed for Mode");
-    close(shm_fd);
+    close(shm_mode_fd);
     exit(1);
   }
-
-  close(shm_fd); // ファイルディスクリプタを閉じる
 
   // 初期値を設定
   *SFI_mode = RECORD_mode;
@@ -7362,9 +7372,15 @@ havoc_stage:
         // mutateして共有メモリに渡す
         u8 is_fi_mutated = input_faults_before_mutation->faults[i].is_fi;
 
+        memcpy(input_faults_mutated, input_faults_before_mutation, sizeof(InputFaults));
+
         FLIP_BIT(&is_fi_mutated, 0);
         // struct tm *utc = gmtime(&now);
+        //for (int j=0; j < input_faults_mutated->current_size; j++){
         input_faults_mutated->faults[i].is_fi = is_fi_mutated;
+        //input_faults_mutated->faults[i].is_fi = 1;
+        // }
+        msync(input_faults_mutated, SHM_SIZE_MUTATED, MS_SYNC);
 
         printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
 
@@ -9220,6 +9236,7 @@ int main(int argc, char** argv) {
 
   setup_mode_shared_memory_fuzzer();
   setup_mutated_shared_memory_fuzzer();
+  setup_faults_shared_memory_fuzzer();
 
   // セマフォの初期化
   sem_mutated = initialize_semaphore(SEM_MUTATED_NAME);
