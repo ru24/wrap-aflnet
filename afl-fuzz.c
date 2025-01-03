@@ -5124,7 +5124,7 @@ static void check_term_size(void);
 static void show_stats(void) {
 
   /* デバッグ用に他の変数を確認したい */
-  return;
+  // return;
 
   static u64 last_stats_ms, last_plot_ms, last_ms, last_execs;
   static double avg_exec;
@@ -6174,7 +6174,7 @@ static u8 fuzz_one(char** argv) {
   u8  a_collect[MAX_AUTO_EXTRA];
   u32 a_len = 0;
 
-  printf("fuzz_one SFI_mutate_flag : %d\n", SFI_mutate_flag);
+//  printf("fuzz_one SFI_mutate_flag : %d\n", SFI_mutate_flag);
 
 #ifdef IGNORE_FINDS
 
@@ -7357,13 +7357,13 @@ havoc_stage:
 
   /* SFI_Listのis_fiの変異 */
   if (SFI_mutate_flag) {
-    printf("SFI_mutate!!!\n");
+  //  printf("SFI_mutate!!!\n");
     for (int i = 0; i < input_faults_before_mutation->current_size; i++) {
-      printf("current_size : %d\n", input_faults_before_mutation->current_size);
+   //   printf("current_size : %d\n", input_faults_before_mutation->current_size);
       sfi_mutate_with = false;
       if (input_faults_before_mutation->faults[i].response_code == target_state_id) {
 
-        printf("SFI_mutate!\n");
+    //    printf("SFI_mutate!\n");
 
         sfi_mutate_with = true;
 
@@ -7382,7 +7382,7 @@ havoc_stage:
         // }
         msync(input_faults_mutated, SHM_SIZE_MUTATED, MS_SYNC);
 
-        printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
+    //    printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
 
         if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
 
@@ -9698,7 +9698,7 @@ int main(int argc, char** argv) {
         selected_seed = choose_seed(target_state_id, seed_selection_algo);
       }
 
-      printf("target_state_id : %d \n", target_state_id);
+  //    printf("target_state_id : %d \n", target_state_id);
 
       /* Seek to the selected seed */
       if (selected_seed) {
@@ -9720,7 +9720,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      printf("fname %d : %s\n", fuzz_loop_time, queue_cur->fname);
+//      printf("fname %d : %s\n", fuzz_loop_time, queue_cur->fname);
 
       *SFI_mode = RECORD_mode;
 
@@ -9734,7 +9734,7 @@ int main(int argc, char** argv) {
         }
       }
 
-      printf("SFI_mode %d : %d\n", fuzz_loop_time, SFI_mutate_flag);
+  //    printf("SFI_mode %d : %d\n", fuzz_loop_time, SFI_mutate_flag);
 
       fuzz_loop_time++;
 
