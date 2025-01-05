@@ -98,6 +98,8 @@
 #  define EXP_ST static
 #endif /* ^AFL_LIB */
 
+int SFI_fuzzing_time=0;
+
 /* Lots of globals, but mostly for the status UI and other things where it
    really makes no sense to haul them around as function parameters. */
 InputFaults *input_faults_mutated = NULL; // 変異後のデータを格納するための変数
@@ -865,6 +867,8 @@ void update_state_aware_inputfaults (u8 *fn)
 {
   // IDのListの作成
   u8 *base_name = basename(fn);
+  
+        msync(input_faults, SHM_SIZE, MS_SYNC);
 
   // is_fi用のディレクトリに保存
   char *is_fi_path = alloc_printf("%s/SFI_List/is_fi/%s", out_dir, base_name);
@@ -3894,6 +3898,7 @@ static void perform_dry_run(char** argv) {
 
     /* save the seed to file for replaying */
     u8 *fn_replay = alloc_printf("%s/replayable-queue/%s", out_dir, basename(q->fname));
+    update_state_aware_inputfaults(fn_replay);
     save_kl_messages_to_file(kl_messages, fn_replay, 1, messages_sent);
     ck_free(fn_replay);
 
@@ -5821,6 +5826,15 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
 
   fault = run_target(argv, exec_tmout);
 
+  if (sfi_mutate_with) {
+            // is_fi用のディレクトリに保存
+SFI_fuzzing_time++;
+          char str[12]; // 十分なサイズのバッファを確保
+    sprintf(str, "%d", SFI_fuzzing_time);
+  char *is_fi_path = alloc_printf("%s/out_sfi/%s", out_dir, str);
+  save_SFIList_is_fi_to_file(input_faults, (unsigned char *)is_fi_path);
+  ck_free(is_fi_path);
+  }
   //Update fuzz count, no matter whether the generated test is interesting or not
   if (state_aware_mode) update_fuzzs();
 
@@ -5849,6 +5863,9 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
   /* This handles FAULT_ERROR for us: */
 
   queued_discovered += save_if_interesting(argv, out_buf, len, fault);
+
+  sfi_mutate_with = false;
+
 
   if (!(stage_cur % stats_update_freq) || stage_cur + 1 == stage_max)
     show_stats();
@@ -7380,8 +7397,8 @@ havoc_stage:
         input_faults_mutated->faults[i].is_fi = is_fi_mutated;
         //input_faults_mutated->faults[i].is_fi = 1;
         // }
-        msync(input_faults_mutated, SHM_SIZE_MUTATED, MS_SYNC);
 
+        msync(input_faults_mutated, SHM_SIZE_MUTATED, MS_SYNC);
     //    printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
 
         if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
@@ -9725,14 +9742,12 @@ int main(int argc, char** argv) {
       *SFI_mode = RECORD_mode;
 
       /* 仮 */
-      if (target_state_id != 0) {
         create_input_faults_mutated_from_qfname(queue_cur->fname); 
         if (is_target_state_id_included(input_faults_before_mutation, target_state_id)) {
           SFI_mutate_flag = true;
         } else {
           SFI_mutate_flag = false;
         }
-      }
 
   //    printf("SFI_mode %d : %d\n", fuzz_loop_time, SFI_mutate_flag);
 
