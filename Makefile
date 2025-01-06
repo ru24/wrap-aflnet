@@ -30,10 +30,10 @@ SH_PROGS    = afl-plot afl-cmin afl-whatsup
 CFLAGS     ?= -O3 -funroll-loops
 CFLAGS     += -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign -Wno-unused-result \
 	      -DAFL_PATH=\"$(HELPER_PATH)\" -DDOC_PATH=\"$(DOC_PATH)\" \
-	      -DBIN_PATH=\"$(BIN_PATH)\"
+	      -DBIN_PATH=\"$(BIN_PATH)\" -fPIE
 
 ifneq "$(filter Linux GNU%,$(shell uname))" ""
-  LDFLAGS  += -ldl -lgvc -lcgraph -lm -lcap -lrt
+  LDFLAGS  += -ldl -lgvc -lcgraph -lm -lcap -lrt -lpthread -pie
 endif
 
 ifeq "$(findstring clang, $(shell $(CC) --version 2>/dev/null))" ""
@@ -61,6 +61,9 @@ test_x86:
 
 endif
 
+shared_defs.o: shared_defs.c shared_defs.h
+	$(CC) $(CFLAGS) -c shared_defs.c -o shared_defs.o
+
 afl-gcc: afl-gcc.c $(COMM_HDR) | test_x86
 	$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
 	set -e; for i in afl-g++ afl-clang afl-clang++; do ln -sf afl-gcc $$i; done
@@ -69,8 +72,8 @@ afl-as: afl-as.c afl-as.h $(COMM_HDR) | test_x86
 	$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
 	ln -sf afl-as as
 
-afl-fuzz: afl-fuzz.c $(COMM_HDR) aflnet.o aflnet.h | test_x86
-	$(CC) $(CFLAGS) $@.c aflnet.o -o $@ $(LDFLAGS)
+afl-fuzz: afl-fuzz.c $(COMM_HDR) aflnet.o aflnet.h shared_defs.o | test_x86
+	$(CC) $(CFLAGS) $@.c aflnet.o shared_defs.o -o $@ $(LDFLAGS)
 
 afl-replay: afl-replay.c $(COMM_HDR) aflnet.o aflnet.h | test_x86
 	$(CC) $(CFLAGS) $@.c aflnet.o -o $@ $(LDFLAGS)

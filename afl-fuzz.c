@@ -394,8 +394,12 @@ u32 *response_bytes = NULL; //an array keeping accumulated response buffer size
 //once messages 0->i have been received and processed by the SUT
 u32 max_annotated_regions = 0;
 u32 target_state_id = 0;
+u32 ftarget_state_id = 0;
 u32 *state_ids = NULL;
 u32 state_ids_count = 0;
+u32 *fstate_ids = NULL;   // fidの配列
+u32 fstate_ids_count;     // カウント
+
 u32 selected_state_index = 0;
 u32 state_cycles = 0;
 u32 messages_sent = 0;
@@ -429,6 +433,7 @@ static FILE* ipsm_dot_file;
 klist_t(lms) *kl_messages;
 khash_t(hs32) *khs_ipsm_paths;
 khash_t(hms) *khms_states;
+khash_t(outer) *outer_table; // 外部ハッシュテーブル
 
 //M2_prev points to the last message of M1 (i.e., prefix)
 //If M1 is empty, M2_prev == NULL
@@ -450,7 +455,8 @@ void setup_ipsm()
 
   khs_ipsm_paths = kh_init(hs32);
 
-  khms_states = kh_init(hms);
+  outer_table = kh_init(outer);
+ //  khms_states = kh_init(hms);
 }
 
 /* Free memory allocated to state-machine variables */
@@ -463,6 +469,9 @@ void destroy_ipsm()
   state_info_t *state;
   kh_foreach_value(khms_states, state, {ck_free(state->seeds); ck_free(state);});
   kh_destroy(hms, khms_states);
+
+  /* 内部テーブルの初期化が必要*/
+  kh_destroy(outer, outer_table);
 
   ck_free(state_ids);
 }
@@ -593,10 +602,60 @@ u8* choose_source_region(u32 *out_len) {
   return out;
 }
 
+
+// input_faults から重複を除いた unsigned int 配列を作成する関数
+unsigned int *createUniqueUnsignedIntArray(InputFaults *inputfaults, unsigned int *output_size) {
+    unsigned int total_size = inputfaults->current_size;
+    unsigned int *temp_array = (unsigned int *)malloc(total_size * sizeof(unsigned int));
+    if (temp_array == NULL) {
+        printf("Memory allocation failed\n");
+        *output_size = 0;
+        return NULL;
+    }
+
+    unsigned int temp_size = 0;
+
+    for (unsigned int i = 0; i < inputfaults->current_size; i++) {
+        int fid = inputfaults->faults[i].fid;
+        unsigned int unsigned_fid = (unsigned int)fid;
+        bool is_unique = true;
+
+        // Check for duplicates
+        for (unsigned int j = 0; j < temp_size; j++) {
+            if (temp_array[j] == unsigned_fid) {
+                is_unique = false;
+                break;
+            }
+        }
+
+        if (is_unique) {
+            temp_array[temp_size++] = unsigned_fid;
+        }
+    }
+
+    // Allocate the final array with the unique size
+    unsigned int *unique_array = (unsigned int *)malloc(temp_size * sizeof(unsigned int));
+    if (unique_array == NULL) {
+        printf("Memory allocation failed\n");
+        free(temp_array);
+        *output_size = 0;
+        return NULL;
+    }
+
+    for (unsigned int i = 0; i < temp_size; i++) {
+        unique_array[i] = temp_array[i];
+    }
+
+    free(temp_array);
+    *output_size = temp_size;
+    return unique_array;
+}
+
 /* Update #fuzzs visiting a specific state */
 void update_fuzzs() {
-  unsigned int state_count, i, discard;
+  unsigned int state_count, fstate_count, i, j, discard;
   unsigned int *state_sequence = (*extract_response_codes)(response_buf, response_buf_size, &state_count);
+  unsigned int *fstate_sequence = createUniqueUnsignedIntArray(input_faults, &fstate_count);
 
   //A hash set is used so that the #paths is not updated more than once for one specific state
   khash_t(hs32) *khs_state_ids;
@@ -610,9 +669,16 @@ void update_fuzzs() {
       continue;
     } else {
       kh_put(hs32, khs_state_ids, state_id, &discard);
-      k = kh_get(hms, khms_states, state_id);
-      if (k != kh_end(khms_states)) {
-        kh_val(khms_states, k)->fuzzs++;
+      k = kh_get(outer, outer_table, state_id);
+      if (k != kh_end(outer_table)) {
+        khash_t(hms) *inner_table = kh_val(outer_table, k);
+        for (j = 0; j < fstate_count; j++) {
+          unsigned int fstate_id = fstate_sequence[j];
+          k = kh_get(hms, inner_table, fstate_id);
+          if (k != kh_end(inner_table)) {
+            kh_val(inner_table, k)->fuzzs++;
+          }
+        }
       }
     }
   }
@@ -630,50 +696,74 @@ u32 index_search(u32 *A, u32 n, u32 val) {
 }
 
 /* Calculate state scores and select the next state */
-u32 update_scores_and_select_next_state(u8 mode) {
-  u32 result = 0, i;
+/* 返り値を引数に変更 */
+void update_scores_and_select_next_state(u8 mode, u32 result, u32 result2) {
+  result = 0;
+  result2 = 0;
+  u32 i, j;
 
-  if (state_ids_count == 0) return 0;
+  if (state_ids_count == 0) return;
 
   u32 *state_scores = NULL;
   state_scores = (u32 *)ck_alloc(state_ids_count * sizeof(u32));
+  u32 *fstate_scores = NULL;
+  fstate_scores = (u32 *)ck_alloc(state_ids_count * fstate_ids_count * sizeof(u32));
   if (!state_scores) PFATAL("Cannot allocate memory for state_scores");
 
   khint_t k;
-  state_info_t *state;
+  state_info_t *state = NULL;
   //Update the states' score
   for(i = 0; i < state_ids_count; i++) {
     u32 state_id = state_ids[i];
 
-    k = kh_get(hms, khms_states, state_id);
-    if (k != kh_end(khms_states)) {
-      state = kh_val(khms_states, k);
-      switch(mode) {
-        case FAVOR:
-          state->score = ceil(1000 * pow(2, -log10(log10(state->fuzzs + 1) * state->selected_times + 1)) * pow(2, log(state->paths_discovered + 1)));
-          break;
-        //other cases are reserved
-      }
+    k = kh_get(outer, outer_table, state_id);
+    if (k != kh_end(outer_table)) {
+      khash_t(hms) *inner_table = kh_val(outer_table, k);
+      for (j = 0; j < fstate_ids_count; j++){
+        u32 fstate_id = fstate_ids[j];
 
-      if (i == 0) {
-        state_scores[i] = state->score;
-      } else {
-        state_scores[i] = state_scores[i-1] + state->score;
+        k = kh_get(hms, inner_table, fstate_id);
+        if (k != kh_end(inner_table)) {
+          state = kh_val(inner_table, k);
+          switch(mode) {
+            case FAVOR:
+              state->score = ceil(1000 * pow(2, -log10(log10(state->fuzzs + 1) * state->selected_times + 1)) * pow(2, log(state->paths_discovered + 1)));
+              break;
+        //other cases are reserved
+          }
+        }
+        if (j == 0) {
+          fstate_scores[j] = state->score;
+        } else {
+          fstate_scores[j] = fstate_scores[j-1] + state->score;
+        }
+
+        if (i == 0 && j == 0){
+          state_scores[i] = state->score;
+        } else {
+          state_scores[i] = state_scores[i-1] + state->score;
+        }
       }
     }
   }
 
   u32 randV = UR(state_scores[state_ids_count - 1]);
   u32 idx = index_search(state_scores, state_ids_count, randV);
+  u32 jdx = index_search(fstate_scores, state_ids_count * fstate_ids_count, randV);
+
+  jdx %= state_ids_count;
+  
   result = state_ids[idx];
+  result2 = fstate_ids[jdx];
 
   if (state_scores) ck_free(state_scores);
-  return result;
+  if (fstate_scores) ck_free(fstate_scores);
 }
 
 /* Select a target state at which we do state-aware fuzzing */
-unsigned int choose_target_state(u8 mode) {
-  u32 result = 0;
+void choose_target_state(u8 mode, u32 result, u32 result2) {
+  result = 0;
+  result2 = 0;
 
   switch (mode) {
     case RANDOM_SELECTION: //Random state selection
@@ -697,40 +787,41 @@ unsigned int choose_target_state(u8 mode) {
         break;
       }
 
-      result = update_scores_and_select_next_state(FAVOR);
+      update_scores_and_select_next_state(FAVOR, result, result2);
       break;
     default:
       break;
   }
-
-  return result;
 }
 
 /* Select a seed to exercise the target state */
-struct queue_entry *choose_seed(u32 target_state_id, u8 mode)
+struct queue_entry *choose_seed(u32 target_state_id, u32 ftarget_state_id, u8 mode)
 {
   khint_t k;
   state_info_t *state;
   struct queue_entry *result = NULL;
 
-  k = kh_get(hms, khms_states, target_state_id);
-  if (k != kh_end(khms_states)) {
-    state = kh_val(khms_states, k);
+  k = kh_get(outer, outer_table, target_state_id);
+  if (k != kh_end(outer_table)) {
+    khash_t(hms) *inner_table = kh_val(outer_table, k);
+    k = kh_get(hms, inner_table, ftarget_state_id);
+    if (k != kh_end(inner_table)) {
+     state = kh_val(inner_table, k);
 
-    if (state->seeds_count == 0) return NULL;
+     if (state->seeds_count == 0) return NULL;
 
-    switch (mode) {
-      case RANDOM_SELECTION: //Random seed selection
+     switch (mode) {
+       case RANDOM_SELECTION: //Random seed selection
         state->selected_seed_index = UR(state->seeds_count);
         result = state->seeds[state->selected_seed_index];
         break;
-      case ROUND_ROBIN: //Round-robin seed selection
+       case ROUND_ROBIN: //Round-robin seed selection
         result = state->seeds[state->selected_seed_index];
         state->selected_seed_index++;
         if (state->selected_seed_index == state->seeds_count) state->selected_seed_index = 0;
         break;
-      case FAVOR:
-        if (state->seeds_count > 10) {
+       case FAVOR:
+         if (state->seeds_count > 10) {
           //Do seed selection similar to AFL + take into account state-aware information
           //e.g., was_fuzzed information becomes state-aware
           u32 passed_cycles = 0;
@@ -768,15 +859,16 @@ struct queue_entry *choose_seed(u32 target_state_id, u8 mode)
               break;
             }
           }
-        } else {
+         }else {
           //Do Round-robin if seeds_count of the selected state is small
           result = state->seeds[state->selected_seed_index];
           state->selected_seed_index++;
           if (state->selected_seed_index == state->seeds_count) state->selected_seed_index = 0;
-        }
+         }
         break;
       default:
         break;
+      }
     }
   } else {
     PFATAL("AFLNet - the states hashtable has no entries for state %d", target_state_id);
@@ -1070,13 +1162,15 @@ void free_inputfaults(InputFaults *inputfaults) {
 void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
 {
   khint_t k;
-  int discard, i;
+  int discard, i, j;
   state_info_t *state;
   unsigned int state_count;
+  unsigned int fstate_count;
 
   if (!response_buf_size || !response_bytes) return;
 
   unsigned int *state_sequence = (*extract_response_codes)(response_buf, response_buf_size, &state_count);
+  unsigned int *fstate_sequence = createUniqueUnsignedIntArray(input_faults, &fstate_count);
 
   q->unique_state_count = get_unique_state_count(state_sequence, state_count);
 
@@ -1121,9 +1215,47 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
           newState_From->selected_seed_index = 0;
           newState_From->seeds = NULL;
           newState_From->seeds_count = 0;
+           
+          k = kh_get(outer, outer_table, prevStateID);
+          // キーが存在しない場合、新しい内部テーブルを作成して追加
+          if (k == kh_end(outer_table)) {
+            int ret;
+            k = kh_put(outer, outer_table, prevStateID, &ret); // 新しいキーを追加
+            if (ret) {
+              kh_val(outer_table, k) = kh_init(hms); // 新しい内部テーブルを初期化
+            }
+          }
+          
+          // 内部テーブルを取得
+          khash_t(hms) *inner_table = kh_val(outer_table, k);
 
-          k = kh_put(hms, khms_states, prevStateID, &discard);
-          kh_value(khms_states, k) = newState_From;
+          // printf("inner set current_size : input_faults->current_size : %d\n", input_faults->current_size);
+           
+          // 内部テーブルが有効な場合、データを追加
+          if (inner_table) {
+            for (j = 0; j < input_faults->current_size; j++) {
+              if (input_faults->faults[j].response_code == prevStateID) {
+                int ret;
+                khiter_t inner_k = kh_put(hms, inner_table, input_faults->faults[j].fid, &ret);
+                if (ret) {
+                  kh_val(inner_table, inner_k) = newState_From; // データを設定
+                  fstate_ids = (u32 *) ck_realloc(fstate_ids, (fstate_ids_count + 1) * sizeof(u32));
+                  fstate_ids[fstate_ids_count++] = input_faults->faults[j].fid;
+                  // printf("innertable :j != 0 \n");
+                }
+              } 
+              if(j == 0) {
+                int ret;
+                khiter_t inner_k = kh_put(hms, inner_table, 0, &ret);
+                if (ret) {
+                  // printf("innertable :j == 0 \n");
+                  kh_val(inner_table, inner_k) = newState_From; // データを設定
+                  fstate_ids = (u32 *) ck_realloc(fstate_ids, (fstate_ids_count + 1) * sizeof(u32));
+                  fstate_ids[fstate_ids_count++] = input_faults->faults[j].fid;
+                }
+              }
+            }
+          }
 
           //Insert this into the state_ids array too
           state_ids = (u32 *) ck_realloc(state_ids, (state_ids_count + 1) * sizeof(u32));
@@ -1139,7 +1271,7 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
           if (dry_run) agset(to,"color","blue");
           else agset(to,"color","red");
 
-          //Insert this newly discovered state into the states hashtable
+        //Insert this newly discovered state into the states hashtable
           state_info_t *newState_To = (state_info_t *) ck_alloc (sizeof(state_info_t));
           newState_To->id = curStateID;
           newState_To->is_covered = 1;
@@ -1152,8 +1284,42 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
           newState_To->seeds = NULL;
           newState_To->seeds_count = 0;
 
-          k = kh_put(hms, khms_states, curStateID, &discard);
-          kh_value(khms_states, k) = newState_To;
+          k = kh_get(outer, outer_table, curStateID);
+          // キーが存在しない場合、新しい内部テーブルを作成して追加
+          if (k == kh_end(outer_table)) {
+            int ret;
+            k = kh_put(outer, outer_table, curStateID, &ret); // 新しいキーを追加
+            if (ret) {
+              kh_val(outer_table, k) = kh_init(hms); // 新しい内部テーブルを初期化
+            }
+          }
+
+          // 内部テーブルを取得
+          khash_t(hms) *inner_table = kh_val(outer_table, k);
+
+          // 内部テーブルが有効な場合、データを追加
+          if (inner_table) {
+            for (j = 0; j < input_faults->current_size; j++) {
+              if (input_faults->faults[j].response_code == curStateID) {
+                int ret;
+                khiter_t inner_k = kh_put(hms, inner_table, input_faults->faults[j].fid, &ret);
+                if (ret) {
+                  kh_val(inner_table, inner_k) = newState_To; // データを設定
+                  fstate_ids = (u32 *) ck_realloc(fstate_ids, (fstate_ids_count + 1) * sizeof(u32));
+                  fstate_ids[fstate_ids_count++] = input_faults->faults[j].fid;
+                }
+              } 
+              if (j == 0){
+                int ret;
+                khiter_t inner_k = kh_put(hms, inner_table, 0, &ret);
+                if (ret) {
+                  kh_val(inner_table, inner_k) = newState_To; // データを設定
+                  fstate_ids = (u32 *) ck_realloc(fstate_ids, (fstate_ids_count + 1) * sizeof(u32));
+                  fstate_ids[fstate_ids_count++] = 0;
+                }
+              }
+            }
+          }
 
           //Insert this into the state_ids array too
           state_ids = (u32 *) ck_realloc(state_ids, (state_ids_count + 1) * sizeof(u32));
@@ -1199,18 +1365,21 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
   //Update the states hashtable to keep the list of seeds which help us to reach a specific state
   //Iterate over the regions & their annotated state (sub)sequences and update the hashtable accordingly
   //All seed should "reach" state 0 (initial state) so we add this one to the map first
-  k = kh_get(hms, khms_states, 0);
-  if (k != kh_end(khms_states)) {
-    state = kh_val(khms_states, k);
-    state->seeds = (void **) ck_realloc (state->seeds, (state->seeds_count + 1) * sizeof(void *));
-    state->seeds[state->seeds_count] = (void *)q;
-    state->seeds_count++;
+  k = kh_get(outer, outer_table, 0);
+  if (k != kh_end(outer_table)) {
+    khash_t(hms) *inner_table = kh_val(outer_table, k);
+    k = kh_get(hms, inner_table, 0);
+    if (k != kh_end(inner_table)) {
+      state = kh_val(inner_table, k);
+      state->seeds = (void **) ck_realloc (state->seeds, (state->seeds_count + 1) * sizeof(void *));
+      state->seeds[state->seeds_count] = (void *)q;
+      state->seeds_count++;
 
-    was_fuzzed_map[0][q->index] = 0; //Mark it as reachable but not fuzzed
-  } else {
-    PFATAL("AFLNet - the states hashtable should always contain an entry of the initial state");
+      was_fuzzed_map[0][q->index] = 0; //Mark it as reachable but not fuzzed
+    } else {
+      PFATAL("AFLNet - the states hashtable should always contain an entry of the initial state");
+    }
   }
-
   //Now update other states
   for(i = 0; i < q->region_count; i++) {
     unsigned int regional_state_count = q->regions[i].state_count;
@@ -1218,12 +1387,20 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
       //reachable_state_id is the last ID in the state_sequence
       unsigned int reachable_state_id = q->regions[i].state_sequence[regional_state_count - 1];
 
-      k = kh_get(hms, khms_states, reachable_state_id);
-      if (k != kh_end(khms_states)) {
-        state = kh_val(khms_states, k);
-        state->seeds = (void **) ck_realloc (state->seeds, (state->seeds_count + 1) * sizeof(void *));
-        state->seeds[state->seeds_count] = (void *)q;
-        state->seeds_count++;
+      k = kh_get(outer, outer_table, reachable_state_id);
+      if (k != kh_end(outer_table)) {
+        khash_t(hms) *inner_table = kh_val(outer_table, k);
+        for (j = 0; j < input_faults->current_size; j++) {
+          if (input_faults->faults[j].response_code == reachable_state_id) {
+            k = kh_get(hms, inner_table, reachable_state_id);
+            if (k != kh_end(inner_table)) {
+              state = kh_val(inner_table, k);
+              state->seeds = (void **) ck_realloc (state->seeds, (state->seeds_count + 1) * sizeof(void *));
+              state->seeds[state->seeds_count] = (void *)q;
+              state->seeds_count++;
+            }
+          }
+        }
       } else {
         //XXX. This branch is supposed to be not reachable
         //However, due to some undeterminism, new state could be seen during regions' annotating process
@@ -1245,9 +1422,25 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
         newState->seeds[0] = (void *)q;
         newState->seeds_count = 1;
 
-        k = kh_put(hms, khms_states, reachable_state_id, &discard);
-        kh_value(khms_states, k) = newState;
 
+        k = kh_get(outer, outer_table, reachable_state_id);
+
+        if (k != kh_end(outer_table)) {
+
+          khash_t(hms) *inner_table = kh_val(outer_table, k);
+          for (j = 0; j < input_faults->current_size; j++) {
+
+            if (input_faults->faults[j].response_code == reachable_state_id) {
+              k = kh_get(hms, inner_table, reachable_state_id);
+              if (k != kh_end(inner_table)) {
+                kh_value(inner_table, k) = newState;
+                fstate_ids = (u32 *) ck_realloc(fstate_ids, (fstate_ids_count + 1) * sizeof(u32));
+                fstate_ids[fstate_ids_count++] = input_faults->faults[j].fid;
+              }
+
+            }
+          }
+        }
         //Insert this into the state_ids array too
         state_ids = (u32 *) ck_realloc(state_ids, (state_ids_count + 1) * sizeof(u32));
         state_ids[state_ids_count++] = reachable_state_id;
@@ -1272,19 +1465,34 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
       continue;
     } else {
       kh_put(hs32, khs_state_ids, state_id, &discard);
-      k = kh_get(hms, khms_states, state_id);
-      if (k != kh_end(khms_states)) {
-        kh_val(khms_states, k)->paths++;
+      k = kh_get(outer, outer_table, state_id);
+      if (k != kh_end(outer_table)) {
+        khash_t(hms) *inner_table = kh_val(outer_table, k);
+        for (j = 0; j < fstate_count; j++) {
+          unsigned int fstate_id = fstate_sequence[j];
+          k = kh_get(hms, inner_table, fstate_id);
+          if (k != kh_end(inner_table)) {
+            kh_val(inner_table, k)->paths++;
+          }
+        }
       }
     }
   }
+
   kh_destroy(hs32, khs_state_ids);
 
   //Update paths_discovered
   if (!dry_run) {
-    k = kh_get(hms, khms_states, target_state_id);
-    if (k != kh_end(khms_states)) {
-      kh_val(khms_states, k)->paths_discovered++;
+    k = kh_get(outer, outer_table, target_state_id);
+    if (k != kh_end(outer_table)) {
+      khash_t(hms) *inner_table = kh_val(outer_table, k);
+      for (j = 0; j < fstate_count; j++) {
+        unsigned int fstate_id = fstate_sequence[j];
+        k = kh_get(hms, inner_table, fstate_id);
+        if (k != kh_end(inner_table)) {
+          kh_val(inner_table, k)->paths_discovered++;
+        }
+      }     
     }
   }
 
@@ -5599,15 +5807,23 @@ static void show_stats(void) {
     khint_t k;
     state_info_t *state;
     u32 i = 0;
+    u32 j = 0;
 
     for(i = 0; i < state_ids_count; i++) {
       u32 state_id = state_ids[i];
 
-      k = kh_get(hms, khms_states, state_id);
-      if (k != kh_end(khms_states)) {
-        state = kh_val(khms_states, k);
-        SAYF(cRST "S%-3s:%-4s,"cCYA "%-5s,"cLRD "%-5s,"cGRA "%-5s",  DI(state->id), DI(state->selected_times), DI(state->fuzzs), DI(state->paths_discovered), DI(state->paths));
-        if ((i + 1) % 3 == 0) SAYF("\n");
+      k = kh_get(outer, outer_table, state_id);
+      if (k != kh_end(outer_table)) {
+        khash_t(hms) *inner_table = kh_val(outer_table, k);
+        for (j = 0; j < fstate_ids_count; j++) {
+          unsigned int fstate_id = fstate_ids[j];
+          k = kh_get(hms, inner_table, fstate_id);
+          if (k != kh_end(inner_table)) {
+            state = kh_val(inner_table, k);
+            SAYF(cRST "S%-3s:%-4s,"cCYA "%-5s,"cLRD "%-5s,"cGRA "%-5s",  DI(state->id), DI(state->selected_times), DI(state->fuzzs), DI(state->paths_discovered), DI(state->paths));
+            if ((i + 1) % 3 == 0) SAYF("\n");
+          }
+        }
       }
     }
   }
@@ -9701,18 +9917,21 @@ int main(int argc, char** argv) {
 
       struct queue_entry *selected_seed = NULL;
       while(!selected_seed || selected_seed->region_count == 0) {
-        target_state_id = choose_target_state(state_selection_algo);
+        choose_target_state(state_selection_algo, target_state_id, ftarget_state_id);
 
         /* Update favorites based on the selected state */
         cull_queue();
 
         /* Update number of times a state has been selected for targeted fuzzing */
-        khint_t k = kh_get(hms, khms_states, target_state_id);
-        if (k != kh_end(khms_states)) {
-          kh_val(khms_states, k)->selected_times++;
+        khint_t k = kh_get(outer, outer_table, target_state_id);
+        if (k != kh_end(outer_table)) {
+          khash_t(hms) *inner_table = kh_val(outer_table, k);
+          k = kh_get(hms, inner_table, ftarget_state_id);  
+          if (k != kh_end(inner_table)) {
+            kh_val(inner_table, k)->selected_times++;
+          }
         }
-
-        selected_seed = choose_seed(target_state_id, seed_selection_algo);
+        selected_seed = choose_seed(target_state_id, ftarget_state_id, seed_selection_algo);
       }
 
   //    printf("target_state_id : %d \n", target_state_id);
@@ -9875,7 +10094,6 @@ stop_fuzzing:
   OKF("We're done here. Have a nice day!\n");
 
   exit(0);
-
 }
 
 #endif /* !AFL_LIB */
