@@ -1,8 +1,11 @@
 out-lightftp/
 out-lightftp2/
 out-lightftp*/
+../out-lightftp*/
 
 # ビルド結果や中間ファイル
 fftp
 *.d
 *.o
+has_faults_log.txt
+output*
