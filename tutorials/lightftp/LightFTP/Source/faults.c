@@ -69,6 +69,23 @@ void log_to_file_num(const char *message, int value) {
     fclose(log_file);
 }
 
+// u8 is_fiの値をファイルに書き込む関数
+void is_fi_log_to_file(const InputFaults *inputfaults) {
+    FILE *log_file = fopen("has_faults_log.txt", "a");
+    if (log_file == NULL) {
+        perror("Failed to open file");
+        return;
+    }
+
+    // faults配列の全要素に対してis_fiの値を書き込む
+    for (int i = 0; i < inputfaults->current_size; i++) {
+      fprintf(log_file, "%d ", inputfaults->faults[i].is_fi);
+    }
+      fprintf(log_file, "\n");
+
+    fclose(log_file);
+}
+
 /* AFLNetにおける状態(レスポンスコード)をSFIに対応付けるための抽出 */
 void set_response_code_ftp(const void *buf, size_t len) {
     // データ長が短い場合はスキップ
@@ -228,11 +245,18 @@ void initialize_semaphores() {
     sem_faults = initialize_semaphore(SEM_FAULTS_NAME);
 }
 
+
+
 void add_FI_List (int FID, u8 is_fi, int num) {
-    input_faults->faults[num].fid = FID;
-    input_faults->faults[num].probability = 0.0;
-    input_faults->faults[num].is_fi = is_fi;
-    input_faults->faults[num].response_code = response_code;
+  log_to_file_num("List_size ", num);
+  if (num == 0){
+    initialize_input_faults(input_faults);
+    is_fi_log_to_file(input_faults_mutated);
+  }
+  input_faults->faults[num].fid = FID;
+  input_faults->faults[num].probability = 0.0;
+  input_faults->faults[num].is_fi = is_fi;
+  input_faults->faults[num].response_code = response_code;
   input_faults->current_size++;
 }
 
@@ -259,7 +283,7 @@ bool has_fault(int FID) {
   }
 
   if (input_faults_mutated == NULL) {
-    log_to_file("Shared memory not initialized. Initializing now...\n");
+    // log_to_file("Shared memory not initialized. Initializing now...\n");
     setup_mutated_shared_memory_target();
     if (input_faults_mutated == NULL) {
       log_to_file("Failed to initialize shared memory.\n");
@@ -273,7 +297,7 @@ bool has_fault(int FID) {
     return false;
   }
 
-  log_to_file("start_flags_init\n");
+  // log_to_file("start_flags_init\n");
 
   // ファザー側でSFI_modeを切り替え
   // flags配列の初期化またはサイズ変更時の再初期化
@@ -286,7 +310,7 @@ bool has_fault(int FID) {
     }
   }
 
-  log_to_file("has_faults mutated_stage\n");
+  // log_to_file("has_faults mutated_stage\n");
 
   for (int i = 0; i < input_faults_mutated->current_size; i++) {
     // 一度参照したiは二度目以降は参照しないように
@@ -297,23 +321,29 @@ bool has_fault(int FID) {
 
     if (input_faults_mutated->faults[i].fid == FID) {
       // ファザーの変異後のシーケンスからSFIするか判断
-      if (input_faults_mutated->faults[i].is_fi != 0) {
-        add_FI_List(FID, 1, List_size);
-log_to_file_num("true : input_faults : ", input_faults->faults[List_size].is_fi);
+      flags[i] = true;
+      if (input_faults_mutated->faults[i].is_fi == 0) {
+        add_FI_List(FID, 0, List_size);
+        // log_to_file_num("input_faults : ", input_faults->faults[List_size].is_fi);
         List_size++;
-        log_to_file("\nSFI_INJECT\n");
+        log_to_file("SFI_NOTINJECT");
+        return false;
+      } else  if (input_faults_mutated->faults[i].is_fi ==1 ){
+        add_FI_List(FID, 1, List_size);
+        // log_to_file_num("true : input_faults : ", input_faults->faults[List_size].is_fi);
+        List_size++;
+        log_to_file("SFI_INJECT");
         return true;
       } else {
-        add_FI_List(FID, 0, List_size);
-log_to_file_num("input_faults : ", input_faults->faults[List_size].is_fi);
+        add_FI_List(FID, 2, List_size);
         List_size++;
-
-  log_to_file("\nSFI_NOTINJECT\n");
+        log_to_file("SFI_ELSE");
         return false;
       }
     }
   }
   add_FI_List(FID, 0, List_size);
+        log_to_file("SFI_NOTINJECT");
   List_size++;
   return false;  // 見つからない場合、故障は発生しない
 }

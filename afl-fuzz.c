@@ -931,6 +931,7 @@ void save_SFIList_is_fi_to_file(InputFaults *inputfaults, unsigned char *fname)
 
   fclose(fp);
 }
+
 /* Listをファイルに保存 */
 void save_SFIList_fid_to_file(InputFaults *inputfaults, unsigned char *fname)
 {
@@ -974,6 +975,67 @@ void update_state_aware_inputfaults (u8 *fn)
 
   // fid用のディレクトリに保存
   char *response_code_path = alloc_printf("%s/SFI_List/response_code/%s", out_dir, base_name);
+  save_SFIList_response_code_to_file(input_faults, (unsigned char *)response_code_path);
+  ck_free(response_code_path);
+}
+
+// ディレクトリ作成関数
+int create_directory(const char *path) {
+    char tmp_path[1024];
+    size_t len = strlen(path);
+    
+    if (len >= sizeof(tmp_path)) {
+        fprintf(stderr, "Path is too long.\n");
+        return -1;
+    }
+
+    strncpy(tmp_path, path, sizeof(tmp_path));
+    tmp_path[len] = '\0';
+
+    for (char *p = tmp_path + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            if (mkdir(tmp_path, 0755) != 0 && errno != EEXIST) {
+                fprintf(stderr, "Failed to create directory %s: %s\n", tmp_path, strerror(errno));
+                return -1;
+            }
+            *p = '/';
+        }
+    }
+
+    if (mkdir(tmp_path, 0755) != 0 && errno != EEXIST) {
+        fprintf(stderr, "Failed to create directory %s: %s\n", tmp_path, strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+/* SFI_Listを更新する. 多分、stateの更新と同じタイミングで使うといいかも */
+void crash_or_hang_inputfaults (u8 *fn)
+{
+  msync(input_faults, SHM_SIZE, MS_SYNC);
+
+  u8 *dir = alloc_printf("%s-dir",fn);
+
+  if (create_directory(dir) != 0) {
+    fprintf(stderr, "Failed to create directory.\n");
+    free(fn);
+    return;
+  }
+
+  // is_fi用のディレクトリに保存
+  char *is_fi_path = alloc_printf("%s/is_fi", dir);
+  save_SFIList_is_fi_to_file(input_faults, (unsigned char *)is_fi_path);
+  ck_free(is_fi_path);
+
+  // fid用のディレクトリに保存
+  char *fid_path = alloc_printf("%s/fid", dir);
+  save_SFIList_fid_to_file(input_faults, (unsigned char *)fid_path);
+  ck_free(fid_path);
+
+  // fid用のディレクトリに保存
+  char *response_code_path = alloc_printf("%s/response_code", dir);
   save_SFIList_response_code_to_file(input_faults, (unsigned char *)response_code_path);
   ck_free(response_code_path);
 }
@@ -1132,7 +1194,6 @@ void create_input_faults_mutated_from_qfname(const char *q_fname) {
     return;
   }
 
-  input_faults_before_mutation = (InputFaults*)malloc(SHM_SIZE_MUTATED);
   memset(input_faults_before_mutation, 0, SHM_SIZE_MUTATED);
   input_faults_before_mutation->current_size = is_fi_count;
 
@@ -4697,6 +4758,7 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
      test case, too. */
 
   save_kl_messages_to_file(kl_messages, fn, 1, messages_sent);
+  crash_or_hang_inputfaults(fn);
 
   /*fd = open(fn, O_WRONLY | O_CREAT | O_EXCL, 0600);
   if (fd < 0) PFATAL("Unable to create '%s'", fn);
@@ -6079,8 +6141,6 @@ SFI_fuzzing_time++;
   /* This handles FAULT_ERROR for us: */
 
   queued_discovered += save_if_interesting(argv, out_buf, len, fault);
-
-  sfi_mutate_with = false;
 
 
   if (!(stage_cur % stats_update_freq) || stage_cur + 1 == stage_max)
@@ -7607,17 +7667,27 @@ havoc_stage:
 
         memcpy(input_faults_mutated, input_faults_before_mutation, sizeof(InputFaults));
 
-        FLIP_BIT(&is_fi_mutated, 0);
+        // FLIP_BIT(&is_fi_mutated, 0);
         // struct tm *utc = gmtime(&now);
         //for (int j=0; j < input_faults_mutated->current_size; j++){
-        input_faults_mutated->faults[i].is_fi = is_fi_mutated;
+        input_faults_mutated->faults[i].is_fi = 1;
         //input_faults_mutated->faults[i].is_fi = 1;
         // }
 
         msync(input_faults_mutated, SHM_SIZE_MUTATED, MS_SYNC);
     //    printf("is_fi after FLIP_BIT (before common_fuzz_stuff) %d : %d\n", i, input_faults_mutated->faults[i].is_fi);
+        
+        bool is_abandon = false;
 
-        if (common_fuzz_stuff(argv, out_buf, len)) goto abandon_entry;
+        if (common_fuzz_stuff(argv, out_buf, len)) is_abandon = true;
+
+        // 初期化
+        memcpy(input_faults_mutated, input_faults_before_mutation, sizeof(InputFaults));
+        sfi_mutate_with = false;
+
+        if (is_abandon) {
+           goto abandon_entry;
+        }
 
         // printf("FLIP_BIT_time : %d", time(&now))
 
@@ -9470,6 +9540,7 @@ int main(int argc, char** argv) {
   setup_mode_shared_memory_fuzzer();
   setup_mutated_shared_memory_fuzzer();
   setup_faults_shared_memory_fuzzer();
+  input_faults_before_mutation = (InputFaults*)malloc(SHM_SIZE_MUTATED);
 
   // セマフォの初期化
   sem_mutated = initialize_semaphore(SEM_MUTATED_NAME);

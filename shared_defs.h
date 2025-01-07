@@ -40,5 +40,8 @@ typedef struct {
   Fault faults[ENTRY_SIZE_MUTATED];      // 入力に関連するFault配列
 } InputFaults;
 
+// 共有メモリを初期化, リセット
+void initialize_input_faults(InputFaults* input_faults);
+
 #endif // SHARED_DEFS_H
 
