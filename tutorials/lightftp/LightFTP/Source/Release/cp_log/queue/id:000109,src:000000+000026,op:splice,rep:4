@@ -1,0 +1,40 @@
+USER anonymous
+HELPPASS ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSeSPOROPTST 127,0,0,1,13NOOP2,193
+PASS ubu„tu
+SYST
+PWD
+PORT 12ÿÿÿÿ0,1,152,193
+LIST
+QUIT
+SYST
+PWD

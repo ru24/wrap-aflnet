@@ -1,0 +1,79 @@
+USER anonymous
+PASS ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSeSPOROPTST 127,0,0,1,132,19SYSTASS ubuntu
+SYST
+PWD
+OPTS 127,0,0,1,152,193
+LIST
+QUIT
+PASS ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSeSPOROPTST 127,0,0,1,132,193
+PASS ubuntu

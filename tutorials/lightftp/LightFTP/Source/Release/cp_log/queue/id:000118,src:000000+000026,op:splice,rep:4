@@ -1,0 +1,57 @@
+USER anonymous
+PASS ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSSPORO=TST 127,0,0,1 ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+,132,193
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,93
+LIST
+QUIT
+SYST
+PWD

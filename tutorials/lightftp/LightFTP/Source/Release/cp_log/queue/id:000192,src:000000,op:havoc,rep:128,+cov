@@ -1,0 +1,8 @@
+USER anonymous
+PASS ubuntu
+SYST
+PWD
+  R
+  R
+LIST
+QUIT

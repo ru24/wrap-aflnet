@@ -1,0 +1,41 @@
+USER anonymous
+PWD
+PdSS ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSeSPOROPTST 127,0,0,1,132,593
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,1,,,,,52,193
+LIST
+QUIT
+SYST
+PWD

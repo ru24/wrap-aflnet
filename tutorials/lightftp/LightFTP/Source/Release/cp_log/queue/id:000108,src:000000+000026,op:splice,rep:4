@@ -1,0 +1,73 @@
+USER anonymous
+PASS ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSeSPORO;TST 127,0,0,1,132,193
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,15,193
+LIST
+QUIT
+PASS ub
+
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSeSPORO;TST 127,0,0,1,132,193
+PASS ubuntu
+SYS7,0,0,1,152,193
+LIST
+QUIT

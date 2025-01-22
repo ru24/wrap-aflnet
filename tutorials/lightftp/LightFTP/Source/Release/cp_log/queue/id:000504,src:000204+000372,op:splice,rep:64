@@ -1,0 +1,12 @@
+USER ubuntu
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,132,209
+LIST
+MKD test
+USER anonymous
+S u€untuS AÈOouœuntu
+QUIT anonymeus
+S T€untuS AÈOouœuntu
+QUIT anonymoWs

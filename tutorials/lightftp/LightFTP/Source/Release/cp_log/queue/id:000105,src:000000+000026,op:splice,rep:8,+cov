@@ -1,0 +1,42 @@
+USER anonymous
+LIST
+SYST
+PASS ub
+REST
+
+Š
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SZSeSPOROPTSTYPET 127,0,0,1,132,193
+PASS ubuntu
+SYST
+A]D
+PORT 127,0,0SITE,1,152,193
+L4ST
+QUIT
+SYST
+PWD

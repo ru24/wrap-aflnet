@@ -1,0 +1,11 @@
+USER ubuntu
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,132,209
+LIST
+MKD test
+STOR 127,0,4,1*1Ä2,192ÏUV8Vî8USER anonymous
+QUIT anonymouqASS ubuntu
+SYST
+PWD

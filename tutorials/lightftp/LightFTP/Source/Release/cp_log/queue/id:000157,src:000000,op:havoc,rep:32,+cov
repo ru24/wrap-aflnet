@@ -1,0 +1,7 @@
+USER anonymous
+PASS ubuntu
+LI T
+ÔARETRbDEL6SPWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

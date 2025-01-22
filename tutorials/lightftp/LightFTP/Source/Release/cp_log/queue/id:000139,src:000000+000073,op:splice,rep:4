@@ -1,0 +1,10 @@
+USER anonymous
+PASS bnaaaaaaaaaaaaa?aaS ubuntu
+SYST
+PWD
+CDUP 127,0,0,1,152,193
+LIST
+QUIT
+PASS ubuntuLIST
+SYST
+SYST
