@@ -1,0 +1,39 @@
+[0;36mafl-fuzz [1;97m2.56b[0m by <lcamtuf@google.com>
+[1;92m[+] [0mLooks like we're not running on a tty, so I'll be a bit less verbose.[0m
+[1;92m[+] [0mYou have 36 CPU cores and 1 runnable tasks (utilization: 3%).[0m
+[1;92m[+] [0mTry parallel jobs - see /usr/local/share/doc/afl/parallel_fuzzing.txt.[0m
+[1;94m[*] [0mChecking CPU core loadout...[0m
+[1;92m[+] [0mFound a free CPU core, binding to #1.[0m
+[1;94m[*] [0mChecking core_pattern...[0m
+[1;94m[*] [0mChecking CPU scaling governor...[0m
+[1;94m[*] [0mSetting up output directories...[0m
+[1;92m[+] [0mOutput directory exists but deemed OK to reuse.[0m
+[1;94m[*] [0mDeleting old session data...[0m
+)B[?25h[0m[1;91m
+[-]  SYSTEM ERROR : [1;97mUnable to delete 'out-lightftp76/replayable-crashes/id:000009,sig:06,src:000001,op:havoc,rep:64,+sfi_mutate-dir'[1;91m
+    Stop location : [0mdelete_files(), afl-fuzz.c:5142
+[1;91m       OS message : [0mIs a directory
+Command exited with non-zero status 1
+	Command being timed: "/home/23mUeno/wrap/aflnet/afl-fuzz -d -i /home/23mUeno/wrap/aflnet/tutorials/lightftp/in-ftp -o out-lightftp76 -N tcp://127.0.0.1/2200 -x /home/23mUeno/wrap/aflnet/tutorials/lightftp/ftp.dict -t 100 -P FTP -D 10000 -q 3 -s 3 -E -R -c ./ftpclean.sh ./fftp fftp.conf 2200"
+	User time (seconds): 0.00
+	System time (seconds): 0.01
+	Percent of CPU this job got: 35%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.03
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 3216
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 224
+	Voluntary context switches: 2
+	Involuntary context switches: 1
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 1

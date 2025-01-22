@@ -606,9 +606,8 @@ u8* choose_source_region(u32 *out_len) {
 
 
 // input_faults から重複を除いた unsigned int 配列を作成する関数
-unsigned int *createUniqueUnsignedIntArray(InputFaults *inputfaults, unsigned int *output_size) {
-    unsigned int total_size = inputfaults->current_size;
-    unsigned int *temp_array = (unsigned int *)malloc(total_size * sizeof(unsigned int));
+unsigned int *createUniqueUnsignedIntArray(unsigned int *inputfaults, unsigned int state_count, unsigned int *output_size) {
+    unsigned int *temp_array = (unsigned int *)malloc(state_count * sizeof(unsigned int));
     if (temp_array == NULL) {
         printf("Memory allocation failed\n");
         *output_size = 0;
@@ -617,21 +616,20 @@ unsigned int *createUniqueUnsignedIntArray(InputFaults *inputfaults, unsigned in
 
     unsigned int temp_size = 0;
 
-    for (unsigned int i = 0; i < inputfaults->current_size; i++) {
-        int fid = inputfaults->faults[i].fid;
-        unsigned int unsigned_fid = (unsigned int)fid;
+    for (unsigned int i = 0; i < state_count; i++) {
+        unsigned int fid = inputfaults[i];
         bool is_unique = true;
 
         // Check for duplicates
         for (unsigned int j = 0; j < temp_size; j++) {
-            if (temp_array[j] == unsigned_fid) {
+            if (temp_array[j] == fid) {
                 is_unique = false;
                 break;
             }
         }
 
         if (is_unique) {
-            temp_array[temp_size++] = unsigned_fid;
+            temp_array[temp_size++] = fid;
         }
     }
 
@@ -657,7 +655,9 @@ unsigned int *createUniqueUnsignedIntArray(InputFaults *inputfaults, unsigned in
 void update_fuzzs() {
   unsigned int state_count, fstate_count, i, j, discard;
   unsigned int *state_sequence = (*extract_response_codes)(response_buf, response_buf_size, &state_count);
-  unsigned int *fstate_sequence = createUniqueUnsignedIntArray(input_faults, &fstate_count);
+  unsigned int fstate_bit_sequence[state_count];
+  calculate_fstate_sequence(fstate_bit_sequence, state_count, fstate_bit_sequence);
+  unsigned int *fstate_sequence = createUniqueUnsignedIntArray(input_faults, state_count, &fstate_count);
 
   //A hash set is used so that the #paths is not updated more than once for one specific state
   khash_t(hs32) *khs_state_ids;
@@ -720,13 +720,13 @@ void update_scores_and_select_next_state(u8 mode, u32 result, u32 result2) {
   //Update the states' score
   for(i = 0; i < state_ids_count; i++) {
     u32 state_id = state_ids[i];
-    //printf("state_id(%d) : %d\n", state_ids_count, i);
+    printf("state_id(%d) : %d\n", state_ids_count, i);
 
     k = kh_get(outer, outer_table, state_id);
     if (k != kh_end(outer_table)) {
       khash_t(hms) *inner_table = kh_val(outer_table, k);
       for (j = 0; j < fstate_ids_count; j++){
-        //printf("fstate_ids_count(%d) : %d\n", fstate_ids_count, j);
+        printf("fstate_ids_count(%d) : %d\n", fstate_ids_count, j);
         u32 fstate_id = fstate_ids[j];
 
         k = kh_get(hms, inner_table, fstate_id);
@@ -739,7 +739,7 @@ void update_scores_and_select_next_state(u8 mode, u32 result, u32 result2) {
         //other cases are reserved
           }
         }
-            // printf("state->score(%d, %d) : %d\n", i, j, state->score);
+             printf("state->score(%d, %d) : %d\n", i, j, state->score);
         if (i == 0 && j == 0) {
           fstate_scores[j] = state->score;
         } else {
@@ -757,7 +757,7 @@ void update_scores_and_select_next_state(u8 mode, u32 result, u32 result2) {
     }
 
     state_scores[i] = fstate_scores[(i + 1) * fstate_ids_count - 1];
-    //printf("state_scores(%d) : %d\n", i, state_scores[i]);
+    printf("state_scores(%d) : %d\n", i, state_scores[i]);
 
   }
   //printf("state_scores[%d] : %d\n", state_ids_count - 1, state_scores[state_ids_count - 1]);
@@ -793,14 +793,15 @@ void choose_target_state(u8 mode, u32 result, u32 result2) {
       result = state_ids[selected_state_index];
       break;
     case ROUND_ROBIN: //Round-robin state selection
-      result = state_ids[selected_state_index];
+      target_state_id = state_ids[selected_state_index];
       selected_state_index++;
       if (selected_state_index == state_ids_count) selected_state_index = 0;
       break;
     case FAVOR:
       /* Do ROUND_ROBIN for a few cycles to get enough statistical information*/
       if (state_cycles < 5) {
-        result = state_ids[selected_state_index];
+        target_state_id = state_ids[selected_state_index];
+        ftarget_state_id = 0; // 試しに
         selected_state_index++;
         if (selected_state_index == state_ids_count) {
           selected_state_index = 0;
@@ -1284,29 +1285,71 @@ unsigned int calculate_faults_bitwise_or(unsigned int state_id) {
     return bit_state;
 }
 
+void print_binary(unsigned int value) {
+    for (int i = 31; i >= 0; i--) { // 32ビットの値をビットごとに表示
+        printf("%c", (value & (1U << i)) ? '1' : '0');
+    }
+}
+
 // state_sequence配列の各state_idまでのfidの論理和を計算してfstate_sequence配列に格納する関数
 void calculate_fstate_sequence(unsigned int *state_sequence, unsigned int state_count, unsigned int *fstate_sequence) {
-    unsigned int result = 0; // 現在の論理和の結果
-    unsigned int j = 0;      // 未計算部分の先頭位置
+    unsigned int result = 0;               // 累計結果
+    unsigned int start = 0;
+    unsigned int current_response_code = 0; // 現在処理中のresponse_code
 
+    // fstate_sequenceの初期化
     for (unsigned int i = 0; i < state_count; i++) {
-        unsigned int current_state_id = state_sequence[i];
+        fstate_sequence[i] = 0;
+    }
 
-        // 論理和を行っていない部分を計算
-        while (j < input_faults->current_size) {
-            if (input_faults->faults[j].response_code == current_state_id) {
-                // 現在のstate_idに一致する場合
-                result |= input_faults->faults[j].fid;
-            } else if (result != 0) {
-                // 一致しなくなったら計算を終了
+//  printf("input_faults->current_size : %d \n", input_faults->current_size);
+//  for (unsigned int i = 0; i < input_faults->current_size; i++){
+//    printf("%d %d %d \n", input_faults->faults[i].fid, input_faults->faults[i].is_fi, input_faults->faults[i].response_code);
+//  }
+
+      // fstate_sequenceを表示
+ //   printf("fstate_sequence:\n");
+ //   for (unsigned int i = 0; i < state_count; i++) {
+ //   printf("  fstate_sequence[%u] = 0b", i);
+ //       print_binary(fstate_sequence[i]); // 2進数形式で表示
+ //       printf("\n");
+ //   }
+
+    for (unsigned int j = 0; j < state_count; j++) {
+        if (j > 0 && state_sequence[j] == state_sequence[j-1]) continue;
+        current_response_code = state_sequence[j];
+        for (unsigned int i = start; i < input_faults->current_size; i++) {
+            if (input_faults->faults[i].response_code != current_response_code) {
+                start = i;
+                // 現在の累計結果を次のresponse_codeの範囲に反映
+                for (unsigned int k = j+1; k < state_count; k++) {
+                    if (current_response_code != state_sequence[k]) {
+                        fstate_sequence[k] = result;
+                        break;
+                    } else {
+                        fstate_sequence[k] = fstate_sequence[j];
+                        j++;
+                    }
+                }
                 break;
             }
-            j++;
-        }
 
-        // fstate_sequenceに現在の結果を格納
-        fstate_sequence[i] = result;
+            // is_fiに基づき累積結果を更新
+            if (input_faults->faults[i].is_fi != 0) {
+                result |= (1U << input_faults->faults[i].fid);
+            } else {
+                result &= ~(1U << input_faults->faults[i].fid);
+            }
+        }
     }
+
+     // fstate_sequenceを表示（2進数形式）
+  //  printf("fstate_sequence:\n");
+  //  for (unsigned int i = 0; i < state_count; i++) {
+  //      printf(" %u : fstate_sequence[%u] = 0b", state_sequence[i], i);
+  //      print_binary(fstate_sequence[i]); // 2進数形式で表示
+  //      printf("\n");
+  //  } 
 }
 
 void shift_and_add_zero(unsigned int arr[], unsigned int size) {
@@ -1338,15 +1381,15 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
   if (!response_buf_size || !response_bytes) return;
 
   unsigned int *state_sequence = (*extract_response_codes)(response_buf, response_buf_size, &state_count);
-  unsigned int *fstate_sequence = createUniqueUnsignedIntArray(input_faults, &fstate_count);
   unsigned int fstate_bit_sequence[state_count];
   calculate_fstate_sequence(state_sequence, state_count, fstate_bit_sequence);
+  unsigned int *fstate_sequence = createUniqueUnsignedIntArray(fstate_bit_sequence, state_count, &fstate_count);
 
-  shift_and_add_zero(fstate_bit_sequence, state_count);
-  shift_and_add_zero(state_sequence, state_count);
-  state_count++;
+  // shift_and_add_zero(fstate_bit_sequence, state_count);
+  // shift_and_add_zero(state_sequence, state_count);
+  // state_count++;
 
-  state_sequence[0] = 1;
+  // state_sequence[0] = 1;
 
   q->unique_state_count = get_unique_state_count(state_sequence, state_count);
 
@@ -1361,9 +1404,11 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
     //Update the IPSM graph
     if (state_count > 1) {
       unsigned int prevStateID = state_sequence[0];
+      unsigned int prevFStateID = fstate_bit_sequence[0];
 
       for(i=1; i < state_count; i++) {
         unsigned int curStateID = state_sequence[i];
+        unsigned int curFStateID = fstate_bit_sequence[i];
         char fromState[STATE_STR_LEN], toState[STATE_STR_LEN];
         snprintf(fromState, STATE_STR_LEN, "%d", prevStateID);
         snprintf(toState, STATE_STR_LEN, "%d", curStateID);
@@ -1408,7 +1453,7 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
           // 内部テーブルが有効な場合、データを追加
           if (inner_table || i == 1) {
                 int ret;
-                khiter_t inner_k = kh_put(hms, inner_table, fstate_bit_sequence[i-1], &ret);
+                khiter_t inner_k = kh_put(hms, inner_table, prevFStateID, &ret);
                 if (ret) {
                   kh_val(inner_table, inner_k) = newState_From; // データを設定
                   // printf("innertable :j != 0 \n");
@@ -1417,9 +1462,9 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
 
                     //Insert this into the state_ids array too
           state_ids = (u32 *) ck_realloc(state_ids, (state_ids_count + 1) * sizeof(u32));
-          state_ids[state_ids_count++] = state_sequence[i-1];
+          state_ids[state_ids_count++] = prevStateID;
           fstate_ids = (u32 *) ck_realloc(fstate_ids, (fstate_ids_count + 1) * sizeof(u32));
-          fstate_ids[fstate_ids_count++] = fstate_bit_sequence[i-1];
+          fstate_ids[fstate_ids_count++] = prevFStateID;
 
           //Insert this into the state_ids array too
           //state_ids = (u32 *) ck_realloc(state_ids, (state_ids_count + 1) * sizeof(u32));
@@ -1467,7 +1512,7 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
           if (inner_table != NULL) {
             int ret;
             if (state_count > i){
-              khiter_t inner_k = kh_put(hms, inner_table, fstate_bit_sequence[i], &ret);
+              khiter_t inner_k = kh_put(hms, inner_table, curFStateID, &ret);
               if (ret) {
                 kh_val(inner_table, inner_k) = newState_To; // データを設定
               }
@@ -1478,7 +1523,7 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
           state_ids = (u32 *) ck_realloc(state_ids, (state_ids_count + 1) * sizeof(u32));
           state_ids[state_ids_count++] = curStateID;
                   fstate_ids = (u32 *) ck_realloc(fstate_ids, (fstate_ids_count + 1) * sizeof(u32));
-                  fstate_ids[fstate_ids_count++] = fstate_bit_sequence[i];
+                  fstate_ids[fstate_ids_count++] = curFStateID;
 
           if (curStateID != 0) expand_was_fuzzed_map(1, 0);
         }
@@ -1494,6 +1539,7 @@ void update_state_aware_variables(struct queue_entry *q, u8 dry_run)
 
         //Update prevStateID
         prevStateID = curStateID;
+        prevFStateID = curFStateID;
       }
     }
 
@@ -5493,7 +5539,7 @@ static void check_term_size(void);
 static void show_stats(void) {
 
   /* デバッグ用に他の変数を確認したい */
-   return;
+   //return;
 
   static u64 last_stats_ms, last_plot_ms, last_ms, last_execs;
   static double avg_exec;
@@ -6199,13 +6245,13 @@ EXP_ST u8 common_fuzz_stuff(char** argv, u8* out_buf, u32 len) {
   fault = run_target(argv, exec_tmout);
 
   if (sfi_mutate_with) {
-            // is_fi用のディレクトリに保存
-SFI_fuzzing_time++;
-          char str[12]; // 十分なサイズのバッファを確保
+    // is_fi用のディレクトリに保存
+    SFI_fuzzing_time++;
+    char str[12]; // 十分なサイズのバッファを確保
     sprintf(str, "%d", SFI_fuzzing_time);
-  char *is_fi_path = alloc_printf("%s/out_sfi/%s", out_dir, str);
-  save_SFIList_is_fi_to_file(input_faults, (unsigned char *)is_fi_path);
-  ck_free(is_fi_path);
+    char *is_fi_path = alloc_printf("%s/out_sfi/%s", out_dir, str);
+    save_SFIList_is_fi_to_file(input_faults, (unsigned char *)is_fi_path);
+    ck_free(is_fi_path);
   }
   //Update fuzz count, no matter whether the generated test is interesting or not
   if (state_aware_mode) update_fuzzs();

@@ -328,7 +328,7 @@ bool has_fault(int FID) {
         List_size++;
         log_to_file("SFI_NOTINJECT");
         return false;
-      } else  if (input_faults_mutated->faults[i].is_fi ==1 ){
+      } else  if (input_faults_mutated->faults[i].is_fi == 1) {
         add_FI_List(FID, 1, List_size);
         // log_to_file_num("true : input_faults : ", input_faults->faults[List_size].is_fi);
         List_size++;

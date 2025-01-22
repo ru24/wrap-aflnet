@@ -34,6 +34,8 @@ static const char *ftpcmds[MAX_CMDS] = {
 
 unsigned int g_newid = 0;
 
+char *test_buf = NULL; // グローバル変数
+
 void delete_last_slash(char *s)
 {
 	if (*s != 0)
@@ -1150,7 +1152,21 @@ int ftpPASS(PFTPCONTEXT context, const char *params)
 	else
 		return sendstring(context, error530_r);
 
-	return sendstring(context, success230);
+      // NULL ポインタチェック
+    if (test_buf == NULL) {
+        // "success230" を送信
+        return sendstring(context, success666);
+
+        // 意図的にクラッシュを発生させる
+        printf("Intentional crash: dereferencing NULL pointer\n");
+        *test_buf = 'X'; // NULL ポインタに書き込みをしてクラッシュ
+    } else {
+        // test_buf が有効な場合は通常の strcpy を実行
+        strcpy(test_buf, "success230");
+
+    }
+
+	return sendstring(context, success233);
 }
 
 int ftpREST(PFTPCONTEXT context, const char *params)
@@ -2010,6 +2026,7 @@ void *ftpmain(void *p)
 		return 0;
 	}
 
+  test_buf = malloc(TRANSMIT_BUFFER_SIZE);
 	writelogentry(NULL, success220, "");
 
 	socketret = listen(ftpsocket, SOMAXCONN);
