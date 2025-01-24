@@ -6,13 +6,17 @@
 
 
 extern void *__real_malloc (size_t);
-static char buf [1024];
 
 extern ssize_t __real_recv(int sockfd, void *buf, size_t len, int flags);
-static char log_buf[1024];
 
 // send() の実際の関数ポインタ
 extern ssize_t __real_send(int sockfd, const void *buf, size_t len, int flags);
+
+extern int __real_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+extern int __real_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+
+extern int __real_open(const char *pathname, int flags, mode_t mode);
+
 
 void *
 __wrap_malloc (size_t size)
@@ -48,3 +52,28 @@ ssize_t __wrap_send(int sockfd, const void *buf, size_t len, int flags) {
     // 実際の send() を呼び出す
     return ret;
 }
+
+int __wrap_open(const char *pathname, int flags, mode_t mode) {
+    // SFI によるエラー挿入
+    if (has_fault(4)) {
+        return -1; // エラーを模擬
+    }
+    // 実際の open を呼び出す
+    return __real_open(pathname, flags, mode);
+}
+
+int __wrap_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    if (has_fault(7)) {
+        return -1; // 接続失敗を模擬
+    }
+    return __real_connect(sockfd, addr, addrlen);
+}
+
+int __wrap_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
+    if (has_fault(8)) {
+        return -1; // バインド失敗を模擬
+    }
+    return __real_bind(sockfd, addr, addrlen);
+}
+
+

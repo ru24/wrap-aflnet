@@ -4702,6 +4702,38 @@ static void write_crash_readme(void) {
 
 }
 
+bool has_new_state() {
+  // 状態シーケンスを抽出
+  unsigned int state_count;
+  unsigned int *state_sequence = (*extract_response_codes)(response_buf, response_buf_size, &state_count);
+
+  // メモリ確保エラーの確認
+  if (!state_sequence) {
+    return false;
+  }
+
+  // スタック上に配列を確保
+  unsigned int fstate_bit_sequence[state_count];
+  calculate_fstate_sequence(state_sequence, state_count, fstate_bit_sequence);
+
+  // 状態の確認
+  for (unsigned int i = 0; i < state_count; i++) {
+    khiter_t k = kh_get(outer, outer_table, state_sequence[i]);
+    if (k != kh_end(outer_table)) {
+      khash_t(hms) *inner_table = kh_val(outer_table, k);
+      khiter_t inner_k = kh_get(hms, inner_table, fstate_bit_sequence[i]);
+      if (inner_k == kh_end(inner_table)) {
+        return true;
+      }
+    } else {
+      return true;
+    }
+  }
+
+  // 全ての状態が既存の場合
+  return false;
+}
+
 
 /* Check if the result of an execve() during routine fuzzing is interesting,
    save or queue the input test case for further analysis if so. Returns 1 if
@@ -4719,9 +4751,11 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
     /* Keep only if there are new bits in the map, add to queue for
        future fuzzing, etc. */
 
-    if (!(hnb = has_new_bits(virgin_bits))) {
-      if (crash_mode) total_crashes++;
-      return 0;
+    if (!(hnb = has_new_bits(virgin_bits))){
+      if (!has_new_state()) {
+        if (crash_mode) total_crashes++;
+        return 0;
+      }
     }
 
 #ifndef SIMPLE_FILES

@@ -7,5 +7,6 @@ extern void *__real_malloc(size_t size);
 extern ssize_t __real_recv(int sockfd, void *buf, size_t len, int flags);  // ssize_t に合わせて修正
 ssize_t __wrap_send(int sockfd, const void *buf, size_t len, int flags);
 
+extern ssize_t __real_write(int fd, const void *buf, size_t count);
 #endif // WRAP_H
 
