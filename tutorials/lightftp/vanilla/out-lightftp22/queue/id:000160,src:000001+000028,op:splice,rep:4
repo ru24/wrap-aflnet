@@ -1,0 +1,9 @@
+USER ubuntu
+PASS ubuntu
+PASS ubunt
+PASS ubuntuSYPORTPWD
+PORT 127,0,,1,152,193
+LIST
+QUIT
+SYST
+PWD

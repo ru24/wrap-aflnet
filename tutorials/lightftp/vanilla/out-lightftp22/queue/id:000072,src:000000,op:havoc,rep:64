@@ -1,0 +1,10 @@
+USER anonymous
+PASS }buntuHELhST
+PASS ubuntR
+PASS }buntuHELhST
+PASS ubuntR
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

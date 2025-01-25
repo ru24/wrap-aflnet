@@ -1,0 +1,14 @@
+USER anonymous
+PWD
+PASS ubunymousEPSV
+PA
+S ubuncêpdRT 127,0,0,",3
+PORT 127,0,0,1,152
+SYST
+PWD
+PORT 127,0,0,,152,193
+LIST
+QUIT
+SYST¯
+PWD
+SYST

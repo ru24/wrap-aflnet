@@ -1,0 +1,11 @@
+USER anonymous
+PSER ubuntu
+PASS ubuntu
+SYST
+MKD test
+MKD testPORT 127,0,USER0,1,132,209
+LIST
+MKD test
+QUIT
+SYST
+RNFR 

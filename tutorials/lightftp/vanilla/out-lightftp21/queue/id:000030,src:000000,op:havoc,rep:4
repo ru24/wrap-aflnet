@@ -1,0 +1,5 @@
+PORT 127,0,0,1,152,193
+USER anonymoRESTfs
+QUIT
+PASS ubuntu
+SYST

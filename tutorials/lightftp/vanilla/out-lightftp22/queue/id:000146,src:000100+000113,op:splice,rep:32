@@ -1,0 +1,7 @@
+USER anonymous
+PASS ubuntu
+CDUP
+R ano
+PORT 127,0,0,1,152,193
+LIST
+QUIT

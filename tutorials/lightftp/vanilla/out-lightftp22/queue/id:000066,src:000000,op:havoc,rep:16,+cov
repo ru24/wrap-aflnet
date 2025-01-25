@@ -1,0 +1,10 @@
+USER anonymous
+SYST
+PASS ubuntu
+ÿÿ`S um\`ÿ\\\\\\\\\\\\\\\\\\\\\\\`S um\`S um\NFS,umNF
+LIST
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

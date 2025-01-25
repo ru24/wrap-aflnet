@@ -1155,7 +1155,7 @@ int ftpPASS(PFTPCONTEXT context, const char *params)
       // NULL ポインタチェック
     if (test_buf == NULL) {
         // "success230" を送信
-        return sendstring(context, success666);
+        // return sendstring(context, success666);
 
         // 意図的にクラッシュを発生させる
         printf("Intentional crash: dereferencing NULL pointer\n");

@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubunLêpd PASS ubèntu
+SY
+PWD
+PORT 127,0,0,1,3
+PORT 127,0,0,1,152
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

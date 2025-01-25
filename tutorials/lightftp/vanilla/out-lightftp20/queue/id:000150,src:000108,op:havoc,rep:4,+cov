@@ -1,0 +1,9 @@
+USER anonymous
+PASS ubuntu
+R anonymous
+PORT SIZE0,019
+PWD,1,152,19
+RMD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

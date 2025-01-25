@@ -1,0 +1,8 @@
+USER anonymous
+PASS ubuntu
+HELP ubrƒt]
+PORT 127,0,0,1,NOOP152,193
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

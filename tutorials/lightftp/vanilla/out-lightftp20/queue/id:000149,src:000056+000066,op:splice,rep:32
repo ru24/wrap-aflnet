@@ -1,0 +1,12 @@
+PWD
+USER P ous
+FEAT ubuntu
+PASS ubuntu
+PASS ubuntu
+PASS ubuntu
+PASS ubuntu
+PWD
+PORT 127,0,°,1,152,193›LIST
+QUIT
+PASS ubuntu
+SYST

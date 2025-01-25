@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubuntu
+R anonymnymous
+SYPASS ububtuSYST
+PWD
+PO/T 127,0,M,1,15T,193
+27,0,M,1,152,193
+LIST
+QUIT
+PWD
+PORT 127,0,0,1,152,193

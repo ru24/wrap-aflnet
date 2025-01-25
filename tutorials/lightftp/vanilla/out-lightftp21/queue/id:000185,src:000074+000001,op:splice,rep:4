@@ -1,0 +1,11 @@
+USER anonymous
+MKD test
+SMKD ubuntu
+PASS ubuntust
+SITR ubjntu
+PASS ubuntu32,209
+LIST
+MKD test
+QUIT
+SYST
+PWD

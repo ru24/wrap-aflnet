@@ -1,0 +1,12 @@
+USER anonymous
+£ITE ubuntuPRs
+PASS ubuntu
+SYST
+PORT 127,0,0RT 127,0,0,1,1,SS ubuABORntu
+PORT 127,0,0RT 127,0,0,1,1,SS ubuntuÿPORT =27,0,0R127,0,0,1,1,SS ubuABORntu
+PORT 127,0!0RT 127,0,0,1,1,SS ubuntu
+PORT 127,0,0,1,152,193
+LIST
+QUIT
+PASS ubuntu
+SYST

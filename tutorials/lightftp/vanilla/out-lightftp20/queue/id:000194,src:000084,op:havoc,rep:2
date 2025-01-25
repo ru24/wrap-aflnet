@@ -1,0 +1,14 @@
+USER anonymous
+PASS ubuntu
+PORT 127,0,0,1,152,193
+o xd‰x
+LIST
+o xd‰x
+LI xd‰x
+LIST
+o xd‰x
+LISTST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

@@ -1,0 +1,8 @@
+USER anonymous
+PASS ubuntu
+PASS ubuntu
+PORT 15z,4PASS ubuntu
+PORT 15z,4PASS ubuntu
+QUIT
+PWD
+PORT 127,0,0,1,152,193

@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubuntu
+SITE 127
+0,0,1,132,19I
+PASS ubuntu
+SIZEQUIT
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

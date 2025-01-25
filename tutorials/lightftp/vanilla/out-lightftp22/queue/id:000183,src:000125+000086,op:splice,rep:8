@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubuntu
+PA õbuMKD tes†
+PA õbuM[nymous
+PASS ubuntST
+PWD
+PA õbuMonymousPASS ubuntVT
+PWD
+QUIT
+PWD
+PORT 127,0,0,1,152,193

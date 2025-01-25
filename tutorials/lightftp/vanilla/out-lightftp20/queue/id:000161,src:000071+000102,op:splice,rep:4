@@ -1,0 +1,7 @@
+USER anonymous
+PASS ubuntu
+PORT 193
+LIST
+QUIT
+PASS ubuntu
+SIZEQUIT

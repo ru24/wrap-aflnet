@@ -1,0 +1,10 @@
+USER ubuntu
+PASS ubuntu
+SYST
+ÿRETjno[ymu
+ÿÿRETRjn[ym\
+PASS ubuntu
+PORT 127,0,0,1,132,209
+LIST
+MKD test
+QUIT

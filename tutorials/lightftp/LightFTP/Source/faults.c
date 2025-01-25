@@ -322,6 +322,14 @@ bool has_fault(int FID) {
     if (input_faults_mutated->faults[i].fid == FID) {
       // ファザーの変異後のシーケンスからSFIするか判断
       flags[i] = true;
+
+      // 実験用 エラー処理を行わない
+       // add_FI_List(FID, 0, List_size);
+        // log_to_file_num("input_faults : ", input_faults->faults[List_size].is_fi);
+        //List_size++;
+        //log_to_file("SFI_NOTINJECT");
+        //return false;
+
       if (input_faults_mutated->faults[i].is_fi == 0) {
         add_FI_List(FID, 0, List_size);
         // log_to_file_num("input_faults : ", input_faults->faults[List_size].is_fi);

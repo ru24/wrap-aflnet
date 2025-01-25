@@ -191,6 +191,7 @@ clear_screen = 1,  /* Window resized?                  */
 child_timed_out;   /* Traced process timed out?        */
 
 EXP_ST u32 queued_paths,              /* Total number of queued testcases */
+num_queued_paths,
 queued_variable,           /* Testcases with variable behavior */
 queued_at_start,           /* Total number of initial inputs   */
 queued_discovered,         /* Items discovered during this run */
@@ -2293,7 +2294,7 @@ static void mark_as_redundant(struct queue_entry* q, u8 state) {
 
 /* Append new test case to the queue. */
 
-static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
+static void add_to_queue(u8* fname, u32 len, u8 passed_det, bool flag) {
 
   struct queue_entry* q = ck_alloc(sizeof(struct queue_entry));
 
@@ -2303,7 +2304,7 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
   q->passed_det   = passed_det;
   q->regions      = NULL;
   q->region_count = 0;
-  q->index        = queued_paths;
+  q->index        = num_queued_paths;
   q->generating_state_id = target_state_id;
   q->is_initial_seed = 0;
   q->unique_state_count = 0;
@@ -2317,12 +2318,15 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det) {
 
   } else q_prev100 = queue = queue_top = q;
 
+
+  num_queued_paths++;
   queued_paths++;
+
   pending_not_fuzzed++;
 
   cycles_wo_finds = 0;
 
-  if (!(queued_paths % 100)) {
+  if (!(num_queued_paths % 100)) {
 
     q_prev100->next_100 = q;
     q_prev100 = q;
@@ -3059,7 +3063,7 @@ static void read_testcases(void) {
     if (!access(dfn, F_OK)) passed_det = 1;
     ck_free(dfn);
 
-    add_to_queue(fn, st.st_size, passed_det);
+    add_to_queue(fn, st.st_size, passed_det, false);
 
   }
 
@@ -4743,6 +4747,7 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
   u8  *fn = "";
   u8  hnb;
+  bool flag = false;
   //s32 fd;
   u8  keeping = 0, res;
 
@@ -4752,6 +4757,7 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
        future fuzzing, etc. */
 
     if (!(hnb = has_new_bits(virgin_bits))){
+      flag = true;
       if (!has_new_state()) {
         if (crash_mode) total_crashes++;
         return 0;
@@ -4760,19 +4766,19 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
 #ifndef SIMPLE_FILES
 
-    fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, queued_paths,
+    fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, num_queued_paths,
                       describe_op(hnb));
 
 #else
 
-    fn = alloc_printf("%s/queue/id_%06u", out_dir, queued_paths);
+    fn = alloc_printf("%s/queue/id_%06u", out_dir, num_queued_paths);
 
 #endif /* ^!SIMPLE_FILES */
 
     u32 full_len = save_kl_messages_to_file(kl_messages, fn, 0, messages_sent);
 
     /* We use the actual length of all messages (full_len), not the len of the mutated message subsequence (len)*/
-    add_to_queue(fn, full_len, 0);
+    add_to_queue(fn, full_len, 0, flag);
 
     if (state_aware_mode) update_state_aware_variables(queue_top, 0);
 
@@ -4795,7 +4801,7 @@ static u8 save_if_interesting(char** argv, void* mem, u32 len, u8 fault) {
 
     res = calibrate_case(argv, queue_top, mem, queue_cycle - 1, 0);
 
-    fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, queued_paths,
+    fn = alloc_printf("%s/queue/id:%06u,%s", out_dir, num_queued_paths,
                       describe_op(hnb));
 
     // update_state_aware_inputfaults(fn); 
@@ -7858,6 +7864,8 @@ havoc_stage:
         // 初期化
         memcpy(input_faults_mutated, input_faults_before_mutation, sizeof(InputFaults));
         sfi_mutate_with = false;
+        
+        SFI_mutate_flag = false;
 
         if (is_abandon) {
            goto abandon_entry;
@@ -7867,7 +7875,6 @@ havoc_stage:
 
         // FLIP_BIT(&input_faults_mutated->faults[i].is_fi, 0);
 
-        stage_cur++;
       }
     }
   }

@@ -1,0 +1,7 @@
+top - 23:42:28 up 93 days, 11:33,  6 users,  load average: 0.59, 0.25, 0.39
+Tasks:   0 total,   0 running,   0 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.0 us,  0.6 sy,  0.0 ni, 99.4 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+MiB Mem : 128490.0 total,  40296.9 free,   6741.6 used,  81451.5 buff/cache
+MiB Swap:   2048.0 total,   1980.0 free,     68.0 used. 119921.0 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
