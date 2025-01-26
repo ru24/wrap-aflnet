@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubunous
+PASS ubunðu
+SYST
+PWD
+PORT 127,0,0,1,1193
+LIST
+QUIT
+SYST
+PWD

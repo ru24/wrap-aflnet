@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubunous
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,,152,193
+LKST
+QUIT
+SYST
+PWD

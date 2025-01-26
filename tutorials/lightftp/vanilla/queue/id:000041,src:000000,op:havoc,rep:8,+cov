@@ -1,0 +1,9 @@
+SITE anoÿmSITE anonous
+SITE anonymSITE anonousn}mSITE anonous
+SITE
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

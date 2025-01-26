@@ -2320,7 +2320,9 @@ static void add_to_queue(u8* fname, u32 len, u8 passed_det, bool flag) {
 
 
   num_queued_paths++;
+  if(flag == false) {
   queued_paths++;
+  }
 
   pending_not_fuzzed++;
 

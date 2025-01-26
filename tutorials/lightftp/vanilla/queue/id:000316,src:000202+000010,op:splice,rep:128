@@ -1,0 +1,12 @@
+USER anonymous
+öHELP
+ EPSV  upuotu
+ EPSV  upuntu
+ EPSV  upuotu
+ EPSV  upuntu
+öH an152,192ý
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

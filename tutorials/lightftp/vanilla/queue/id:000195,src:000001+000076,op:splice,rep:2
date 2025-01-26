@@ -1,0 +1,12 @@
+USER ubuntu
+PASS ubuntu
+SYST
+USER anonymous
+PASÇ ubuntu
+PASS ubTnous
+PASS ubuntu
+SYST
+PT
+QUIT
+QUIT
+SYST

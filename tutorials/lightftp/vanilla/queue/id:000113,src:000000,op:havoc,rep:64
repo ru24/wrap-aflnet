@@ -1,0 +1,8 @@
+USER anonymous
+PASS ubuntu
+   ABOR      HELP          PE~T 125,€,0,1,1Å2HELP
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

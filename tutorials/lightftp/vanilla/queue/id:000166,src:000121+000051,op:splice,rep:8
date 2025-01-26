@@ -1,0 +1,7 @@
+USER anonymous
+PASS ubuntu
+   PROT                    PltT 125,€,0,1,152,193
+PROT
+PORT 127,0,0,1,152,193
+LIST
+QUIT

@@ -1,0 +1,9 @@
+PWD
+SYST
+USER @nonsùUSER anon]moùUSE> anononsùUSER anonymouwudùSYST
+USER @[SER ssssssssssssssssssssssss@nonsùUSER anononsùUSER anonymouwùPASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

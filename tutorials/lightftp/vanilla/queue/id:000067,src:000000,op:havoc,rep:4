@@ -1,0 +1,10 @@
+USER anonymous
+PASS buntu
+PASS vuntu
+PASS buntu
+PASS vuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT
