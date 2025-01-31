@@ -1,0 +1,7 @@
+USER anonymous
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST 12ÿÿÿ0,1,152,CWDUIT
+QUIT

@@ -1,0 +1,12 @@
+USER anonymous
+PASS ubASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1
+SYST
+PWD
+POÿÿ 127,0
+LEST
+QUIT
+SYST
+PWD

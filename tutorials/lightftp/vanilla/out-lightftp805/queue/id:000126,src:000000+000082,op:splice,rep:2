@@ -1,0 +1,10 @@
+USER anonymous
+PASS ubunymous
+PASS ubun“PASS ubun“³““tu
+PASS ubun““““t“““tuDELE
+PASS ubun
+PORT 127,0,0,1,152,193
+LIST
+QUIT
+SYST
+PWD

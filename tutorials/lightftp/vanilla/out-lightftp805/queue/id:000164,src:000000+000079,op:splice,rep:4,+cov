@@ -1,0 +1,9 @@
+USER anonymous
+PASS ubuntu
+SYST
+PWD
+PORT ,0,1,±52,PBSZ1 ubuntu
+SYST
+RMD
+LIST
+QUIT

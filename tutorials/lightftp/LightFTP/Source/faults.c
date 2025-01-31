@@ -87,7 +87,7 @@ void is_fi_log_to_file(const InputFaults *inputfaults) {
 }
 
 /* AFLNetにおける状態(レスポンスコード)をSFIに対応付けるための抽出 */
-void set_response_code_ftp(const void *buf, size_t len) {
+void set_response_code_ftp(const char *buf, size_t len) {
     // データ長が短い場合はスキップ
     if (len < 4) {
         return;
@@ -261,6 +261,7 @@ void add_FI_List (int FID, u8 is_fi, int num) {
 }
 
 bool has_fault(int FID) { 
+  //return false;
 
   // 共有メモリが未初期化の場合は初期化
   
@@ -324,11 +325,11 @@ bool has_fault(int FID) {
       flags[i] = true;
 
       // 実験用 エラー処理を行わない
-        add_FI_List(FID, 0, List_size);
-        log_to_file_num("input_faults : ", input_faults->faults[List_size].is_fi);
-        List_size++;
-        log_to_file("SFI_NOTINJECT");
-        return false;
+        //add_FI_List(FID, 0, List_size);
+        //log_to_file_num("input_faults : ", input_faults->faults[List_size].is_fi);
+        //List_size++;
+        //log_to_file("SFI_NOTINJECT");
+        //return false;
 
       if (input_faults_mutated->faults[i].is_fi == 0) {
         add_FI_List(FID, 0, List_size);

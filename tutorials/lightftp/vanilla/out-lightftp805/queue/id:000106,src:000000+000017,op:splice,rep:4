@@ -1,0 +1,9 @@
+USER anonymous
+PASS ubASV ubuntu
+SYST
+PHD
+PORT 127,0,0,1,1STOR93
+LIST
+QUIT
+SYST
+PWD

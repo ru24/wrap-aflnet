@@ -1,0 +1,13 @@
+USER anonymous
+PASR anonymous
+PASS ubuntu
+7SYST
+:ÿÿ,1:7,0,0,1,152,9PORT #27,0,*,L,ÿ1$7,0,12,193
+A
+PSYSTPSYSdt~tt‹
+SYST
+PW27,0,0,1,152,193
+LeST
+QUIT
+SYST
+PWD

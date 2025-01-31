@@ -6,6 +6,7 @@
 
 
 extern void *__real_malloc (size_t);
+static char buf [1024];
 
 extern ssize_t __real_recv(int sockfd, void *buf, size_t len, int flags);
 

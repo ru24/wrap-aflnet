@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubuouR anonXmous
+s
+PASS ubuntu
+SYST
+ÿÿÿ
+PORT 127,0,0,1,152,193
+LIST
+QUIT
+SYST
+PWD

@@ -1,0 +1,11 @@
+USER anonymous
+PROT
+PASS ubASS ubuntu
+SYST
+PWD
+ 127,0,0,1,152,193
+LIST
+ST
+QUIT
+SYST
+PWD
