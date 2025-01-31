@@ -1,0 +1,9 @@
+PWD
+USER anon\m`ut
+LIST
+MKD txsR
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST

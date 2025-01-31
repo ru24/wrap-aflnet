@@ -1,0 +1,13 @@
+USER anonymous
+PASS 
+PORT 12 127,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,WD
+PASS ubuntu
+SYST
+PWD
+PO2,193
+LIST
+QU2,193
+LCST
+QUIT
+SYST
+PWD

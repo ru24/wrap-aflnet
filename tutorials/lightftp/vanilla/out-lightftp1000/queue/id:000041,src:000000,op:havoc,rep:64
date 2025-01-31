@@ -1,0 +1,9 @@
+PORT 126,0,0,1,152xxxxxxxxxxxxxxxxxxx,12,193
+PORT 126,0,,152,1z3
+PORT 126,0,0,1,152xxxxxxxxxxxxxxxšxxx,12,193
+PORT 126,0,,152,1z3
+PASS ubuntu
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST

@@ -1,0 +1,10 @@
+USER anonymous
+P
+PASS zbu
+PASS ubuntqP
+PASS zbu
+PASS ubuntqSYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT
