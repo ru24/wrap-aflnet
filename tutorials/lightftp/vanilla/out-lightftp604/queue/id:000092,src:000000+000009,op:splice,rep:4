@@ -1,0 +1,9 @@
+USER anonymous
+PASS  ubuncu
+SYST
+ WD
+PORT 127
+LIST
+QUIT
+SYST
+PWD

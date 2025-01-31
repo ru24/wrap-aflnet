@@ -1,0 +1,11 @@
+USER anonymous
+PASS ““““““““““““	PASS4ubuntu
+SYST
+PWD
+PORT 127,0,0,1,952,127,0,0,1,
+QUIT7
+SYST
+PWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

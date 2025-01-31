@@ -1,0 +1,11 @@
+USER anonymous
+PASS ubuntu
+PASV
+PORT 27,0,0,,152,1Ö3ÙPASS ubuntu
+PORT 127,0,0,1,152,193
+PORT 27,0,0,,152,1Ö3ÙhASS ubuntu
+PORT 127,0,0,1,15Ä,93
+SL DuPWD
+PORT 127,0,0,1,152,193
+LIST
+QUIT

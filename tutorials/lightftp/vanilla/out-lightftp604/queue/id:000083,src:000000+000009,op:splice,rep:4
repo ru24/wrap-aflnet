@@ -1,0 +1,9 @@
+USER anonymous
+PASS ““““	PASS ubuntu
+ˇ1,152,193
+LIST
+QUI,0,1,152,193
+LIST
+QUIT
+SYST
+PWD

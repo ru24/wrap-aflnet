@@ -1,0 +1,9 @@
+USER ubuntu
+PASS ubuntu
+SYST
+PWD
+ÿÿST
+LIST
+LIST
+MKD test
+QUIT
